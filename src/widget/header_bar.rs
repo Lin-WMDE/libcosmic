@@ -391,6 +391,11 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
             }
         };
 
+        // WMDE: let the active theme override the header padding (e.g. drop the
+        // bottom gap so title-bar tabs sit flush on the strip below). Height is
+        // recomputed from padding, so it tracks the override automatically.
+        let padding = theme::header_padding().unwrap_or(padding);
+
         let start = widget::row::with_children(start)
             .spacing(space_xxxs)
             .align_y(iced::Alignment::Center)
