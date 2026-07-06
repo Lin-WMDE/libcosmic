@@ -68,14 +68,12 @@ pub fn spacing() -> Spacing {
     active().cosmic().spacing
 }
 
-/// WMDE: CSD header bar inner padding override [top, right, bottom, left] from
-/// the active theme, if any. `None` means use the toolkit default.
+/// WMDE: CSD header bar inner padding [top, right, bottom, left] from the active
+/// theme. `[0, 0, 0, 0]` means "unset" -> callers keep the toolkit default.
 #[inline]
-pub fn header_padding() -> Option<[u16; 4]> {
-    active()
-        .cosmic()
-        .header_padding
-        .map(|(t, r, b, l)| [t, r, b, l])
+pub fn header_padding() -> [u16; 4] {
+    let (t, r, b, l) = active().cosmic().header_padding;
+    [t, r, b, l]
 }
 
 /// Whether the active theme has a dark preference.

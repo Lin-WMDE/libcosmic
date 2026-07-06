@@ -109,8 +109,9 @@ pub struct Theme {
     /// text tint color
     pub text_tint: Option<Srgb>,
     /// WMDE: CSD header bar inner padding as (top, right, bottom, left).
-    /// `None` keeps the toolkit default; `Some` overrides it (header height follows).
-    pub header_padding: Option<(u16, u16, u16, u16)>,
+    /// Defaults to `(0, 0, 0, 0)`, which keeps the toolkit default; set any
+    /// non-zero value in the theme to override it (header height follows).
+    pub header_padding: (u16, u16, u16, u16),
 }
 
 impl Default for Theme {
@@ -1351,8 +1352,8 @@ impl ThemeBuilder {
             control_tint: neutral_tint,
             text_tint,
             // WMDE: not exposed through ThemeBuilder; read straight from the theme
-            // config file at runtime (defaults to the toolkit padding when unset).
-            header_padding: None,
+            // config file at runtime. (0, 0, 0, 0) => keep the toolkit padding.
+            header_padding: (0, 0, 0, 0),
         };
         theme.spacing = spacing;
         theme.corner_radii = corner_radii;
