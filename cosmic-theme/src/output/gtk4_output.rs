@@ -159,7 +159,7 @@ impl Theme {
             "light.css"
         };
 
-        config_dir.extend(["gtk-4.0", "cosmic"]);
+        config_dir.extend(["gtk-4.0", "wmde"]);
         if !config_dir.exists() {
             std::fs::create_dir_all(&config_dir).map_err(OutputError::Io)?;
         }
@@ -198,7 +198,7 @@ impl Theme {
         fs::create_dir_all(&gtk4).map_err(OutputError::Io)?;
         fs::create_dir_all(&gtk3).map_err(OutputError::Io)?;
 
-        let cosmic_css_dir = gtk4.join("cosmic");
+        let cosmic_css_dir = gtk4.join("wmde");
         let cosmic_css = cosmic_css_dir.join(if is_dark { "dark.css" } else { "light.css" });
 
         gtk4.push("gtk.css");
@@ -232,7 +232,7 @@ impl Theme {
         let gtk4 = config_dir.join("gtk-4.0");
         let gtk3 = config_dir.join("gtk-3.0");
         let gtk4_dest = gtk4.join("gtk.css");
-        let cosmic_css = gtk4.join("cosmic");
+        let cosmic_css = gtk4.join("wmde");
         let gtk3_dest = gtk3.join("gtk.css");
 
         let res = Self::reset_cosmic_css(&gtk3_dest, &cosmic_css).map_err(OutputError::Io);

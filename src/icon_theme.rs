@@ -6,7 +6,7 @@
 use std::borrow::Cow;
 use std::sync::Mutex;
 
-pub const COSMIC: &str = "Cosmic";
+pub const COSMIC: &str = "WMDE";
 
 pub(crate) static DEFAULT: Mutex<Cow<'static, str>> = Mutex::new(Cow::Borrowed(COSMIC));
 

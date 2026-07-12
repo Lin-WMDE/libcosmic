@@ -119,7 +119,13 @@ impl Error {
     /// Useful for determining if it is appropriate to log as an error.
     #[inline]
     pub fn is_err(&self) -> bool {
-        !matches!(self, Self::NoConfigDirectory | Self::NotFound)
+        match self {
+            Self::NoConfigDirectory | Self::NotFound => false,
+            // A missing key file is not an error: the field just uses its default.
+            // (field-based reads surface this as GetKey wrapping an io NotFound.)
+            Self::GetKey(_, io_err) if io_err.kind() == std::io::ErrorKind::NotFound => false,
+            _ => true,
+        }
     }
 }
 
@@ -200,7 +206,7 @@ impl Config {
     fn system_inner(name: &str, version: u64, look_for_previous: bool) -> Result<Self, Error> {
         let path = sanitize_name(name)?.join(format!("v{version}"));
         #[cfg(unix)]
-        let system_path = xdg::BaseDirectories::with_prefix("cosmic").find_data_file(&path);
+        let system_path = xdg::BaseDirectories::with_prefix("wmde").find_data_file(&path);
 
         #[cfg(windows)]
         let system_path =
@@ -233,7 +239,7 @@ impl Config {
 
         // Search data file, which provides default (e.g. /usr/share)
         #[cfg(unix)]
-        let system_path = xdg::BaseDirectories::with_prefix("cosmic").find_data_file(&path);
+        let system_path = xdg::BaseDirectories::with_prefix("wmde").find_data_file(&path);
 
         #[cfg(windows)]
         let system_path =
@@ -242,7 +248,7 @@ impl Config {
 
         // Get libcosmic user configuration directory
         let mut user_path = get_config_dir().ok_or(Error::NoConfigDirectory)?;
-        user_path.push("cosmic");
+        user_path.push("wmde");
         user_path.push(path);
 
         // Create new configuration directory if not found.
@@ -275,7 +281,7 @@ impl Config {
         let path = sanitize_name(name)?.join(format!("v{version}"));
 
         let mut user_path = custom_path.clone();
-        user_path.push("cosmic");
+        user_path.push("wmde");
         user_path.push(path);
         // Create new configuration directory if not found.
         fs::create_dir_all(&user_path)?;
@@ -309,7 +315,7 @@ impl Config {
 
         // Get libcosmic user state directory
         let mut user_path = get_state_dir().ok_or(Error::NoConfigDirectory)?;
-        user_path.push("cosmic");
+        user_path.push("wmde");
         user_path.push(path);
         // Create new state directory if not found.
         fs::create_dir_all(&user_path)?;
@@ -343,7 +349,7 @@ impl Config {
 
         // Get libcosmic user data directory
         let mut user_path = get_data_dir().ok_or(Error::NoConfigDirectory)?;
-        user_path.push("cosmic");
+        user_path.push("wmde");
         user_path.push(path);
         // Create new data directory if not found.
         fs::create_dir_all(&user_path)?;

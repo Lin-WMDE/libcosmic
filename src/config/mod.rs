@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 use std::sync::{LazyLock, RwLock};
 
 /// ID for the `CosmicTk` config.
-pub const ID: &str = "com.system76.CosmicTk";
+pub const ID: &str = "fun.wmde.Tk";
 
 const MONO_FAMILY_DEFAULT: &str = "Noto Sans Mono";
 const SANS_FAMILY_DEFAULT: &str = "Open Sans";
@@ -117,7 +117,7 @@ impl Default for CosmicTk {
             apply_theme_global: false,
             show_minimize: true,
             show_maximize: true,
-            icon_theme: String::from("Cosmic"),
+            icon_theme: String::from("WMDE"),
             header_size: Density::Standard,
             interface_density: Density::Standard,
             interface_font: FontConfig {
