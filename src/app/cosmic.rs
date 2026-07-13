@@ -1314,7 +1314,9 @@ impl<T: Application> Cosmic<T> {
                 use palette::Srgba;
                 let c = Srgba::new(c.red() as f32, c.green() as f32, c.blue() as f32, 1.0);
                 let core = self.app.core_mut();
-                core.portal_accent = Some(c);
+                // WMDE: don't let the portal's (possibly stale/stuck) accent override the
+                // config accent for our own apps; keep it None so config drives the accent.
+                core.portal_accent = None;
                 let cur_accent = core.system_theme.cosmic().accent_color();
 
                 if cur_accent.distance_squared(*c) < 0.00001 {

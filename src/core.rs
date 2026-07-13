@@ -443,8 +443,11 @@ impl Core {
     #[must_use]
     #[inline]
     pub fn system_is_dark(&self) -> bool {
-        self.portal_is_dark
-            .unwrap_or(self.system_theme_mode.is_dark)
+        // WMDE: the desktop config (system_theme_mode) is authoritative for our own
+        // apps' theme. The XDG Settings portal (portal_is_dark) is only a bridge for
+        // external apps and its live stream can lag/stick, so don't let it override the
+        // config for our rendering.
+        self.system_theme_mode.is_dark
     }
 
     /// The [`Id`] of the main window
