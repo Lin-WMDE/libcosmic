@@ -25,7 +25,6 @@ use iced::{Task, theme, window};
 use iced_futures::event::listen_with;
 #[cfg(feature = "winit")]
 use iced_winit::SurfaceIdWrapper;
-use palette::color_difference::EuclideanDistance;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
@@ -678,10 +677,8 @@ where
                 })
                 .map(crate::Action::Cosmic),
             window_events.map(crate::Action::Cosmic),
-            #[cfg(feature = "xdg-portal")]
-            crate::theme::portal::desktop_settings()
-                .map(Action::DesktopSettings)
-                .map(crate::Action::Cosmic),
+            // WMDE: the XDG portal settings subscription is intentionally not
+            // started; the WMDE config is authoritative for theme mode and accent.
         ];
 
         if self.app.core().keyboard_nav {
@@ -886,14 +883,6 @@ impl<T: Application> Cosmic<T> {
             Action::AppThemeChange(mut theme) => {
                 if let ThemeType::System { theme: _, .. } = theme.theme_type {
                     self.app.core_mut().theme_sub_counter += 1;
-
-                    let portal_accent = self.app.core().portal_accent;
-                    if let Some(a) = portal_accent {
-                        let t_inner = theme.cosmic();
-                        if a.distance_squared(*t_inner.accent_color()) > 0.00001 {
-                            theme = Theme::system(Arc::new(t_inner.with_accent(a)));
-                        }
-                    }
                 }
 
                 let new_blur = self.blur_enabled && {
@@ -960,7 +949,6 @@ impl<T: Application> Cosmic<T> {
                 let cmd = self.app.system_theme_update(&keys, theme.cosmic());
                 // Record the last-known system theme in event that the current theme is custom.
                 self.app.core_mut().system_theme = theme.clone();
-                let portal_accent = self.app.core().portal_accent;
                 {
                     let mut cosmic_theme = THEME.lock().unwrap();
 
@@ -970,16 +958,7 @@ impl<T: Application> Cosmic<T> {
                         prefer_dark,
                     } = cosmic_theme.theme_type
                     {
-                        let mut new_theme = if let Some(a) = portal_accent {
-                            let t_inner = theme.cosmic();
-                            if a.distance_squared(*t_inner.accent_color()) > 0.00001 {
-                                Theme::system(Arc::new(t_inner.with_accent(a)))
-                            } else {
-                                theme
-                            }
-                        } else {
-                            theme
-                        };
+                        let mut new_theme = theme;
                         new_theme.transparent = new_blur;
                         new_theme.theme_type.prefer_dark(prefer_dark);
 
@@ -1056,7 +1035,6 @@ impl<T: Application> Cosmic<T> {
                 core.system_theme_mode = mode;
                 let is_dark = core.system_is_dark();
                 let changed = core.system_theme_mode.is_dark != is_dark
-                    || core.portal_is_dark != Some(is_dark)
                     || core.system_theme.cosmic().is_dark != is_dark;
                 if changed {
                     core.theme_sub_counter += 1;
@@ -1068,16 +1046,6 @@ impl<T: Application> Cosmic<T> {
                     cmds.push(self.app.system_theme_update(&[], new_theme.cosmic()));
 
                     let core = self.app.core_mut();
-                    new_theme = if let Some(a) = core.portal_accent {
-                        let t_inner = new_theme.cosmic();
-                        if a.distance_squared(*t_inner.accent_color()) > 0.00001 {
-                            Theme::system(Arc::new(t_inner.with_accent(a)))
-                        } else {
-                            new_theme
-                        }
-                    } else {
-                        new_theme
-                    };
                     let new_blur = self.blur_enabled && {
                         let t = new_theme.cosmic();
                         match core.app_type() {
@@ -1228,121 +1196,10 @@ impl<T: Application> Cosmic<T> {
             }
 
             #[cfg(feature = "xdg-portal")]
-            Action::DesktopSettings(crate::theme::portal::Desktop::ColorScheme(s)) => {
-                use ashpd::desktop::settings::ColorScheme;
-                if match THEME.lock().unwrap().theme_type {
-                    ThemeType::System {
-                        theme: _,
-                        prefer_dark,
-                    } => prefer_dark.is_some(),
-                    _ => false,
-                } {
-                    return iced::Task::none();
-                }
-                let is_dark = match s {
-                    ColorScheme::NoPreference => None,
-                    ColorScheme::PreferDark => Some(true),
-                    ColorScheme::PreferLight => Some(false),
-                };
-                let core = self.app.core_mut();
-
-                core.portal_is_dark = is_dark;
-                let is_dark = core.system_is_dark();
-                let changed = core.system_theme_mode.is_dark != is_dark
-                    || core.portal_is_dark != Some(is_dark)
-                    || core.system_theme.cosmic().is_dark != is_dark;
-
-                if changed {
-                    core.theme_sub_counter += 1;
-                    let mut new_theme = if is_dark {
-                        crate::theme::system_dark()
-                    } else {
-                        crate::theme::system_light()
-                    };
-                    if let ThemeType::System { .. } = new_theme.theme_type {
-                        let new_blur = self.blur_enabled && {
-                            let t = new_theme.cosmic();
-                            match core.app_type() {
-                                crate::core::AppType::Window => t.frosted_windows,
-                                crate::core::AppType::System => t.frosted_system_interface,
-                                crate::core::AppType::Applet => t.frosted_applets,
-                            }
-                        };
-                        new_theme.transparent = new_blur;
-                    }
-                    core.system_theme = new_theme.clone();
-                    let core = self.app.core();
-                    {
-                        let mut cosmic_theme = THEME.lock().unwrap();
-
-                        // Only apply update if the theme is set to load a system theme
-                        if let ThemeType::System { theme: _, .. } = cosmic_theme.theme_type {
-                            let mut cmds = Vec::with_capacity(1);
-                            #[cfg(all(feature = "wayland", target_os = "linux"))]
-                            {
-                                let blur = if cosmic_theme.transparent {
-                                    iced::window::enable_blur
-                                } else {
-                                    iced::window::disable_blur
-                                };
-
-                                if core.blur(&cosmic_theme, None) {
-                                    cmds.push(blur(
-                                        core.main_window_id().unwrap_or(window::Id::RESERVED),
-                                    ));
-                                }
-
-                                for (id, wrapper, ..) in &self.surface_views {
-                                    let overriden = wrapper.2(&self.app);
-                                    if core.blur(&cosmic_theme, Some(wrapper.1))
-                                        && overriden.blur.unwrap_or(true)
-                                    {
-                                        cmds.push(blur(*id));
-                                    } else if overriden.blur.is_some_and(|b| !b) {
-                                        cmds.push(iced::window::disable_blur(*id));
-                                    }
-                                }
-                            }
-                            cosmic_theme.set_theme(new_theme.theme_type);
-                            return Task::batch(cmds);
-                        }
-                    }
-                }
-            }
-            #[cfg(feature = "xdg-portal")]
-            Action::DesktopSettings(crate::theme::portal::Desktop::Accent(c)) => {
-                use palette::Srgba;
-                let c = Srgba::new(c.red() as f32, c.green() as f32, c.blue() as f32, 1.0);
-                let core = self.app.core_mut();
-                // WMDE: don't let the portal's (possibly stale/stuck) accent override the
-                // config accent for our own apps; keep it None so config drives the accent.
-                core.portal_accent = None;
-                let cur_accent = core.system_theme.cosmic().accent_color();
-
-                if cur_accent.distance_squared(*c) < 0.00001 {
-                    // skip calculations if we already have the same color
-                    return iced::Task::none();
-                }
-
-                {
-                    let mut cosmic_theme = THEME.lock().unwrap();
-
-                    // Only apply update if the theme is set to load a system theme
-                    if let ThemeType::System {
-                        theme: t,
-                        prefer_dark,
-                    } = cosmic_theme.theme_type.clone()
-                    {
-                        cosmic_theme.set_theme(ThemeType::System {
-                            theme: Arc::new(t.with_accent(c)),
-                            prefer_dark,
-                        });
-                    }
-                }
-            }
-            #[cfg(feature = "xdg-portal")]
-            Action::DesktopSettings(crate::theme::portal::Desktop::Contrast(_)) => {
-                // TODO when high contrast is integrated in settings and all custom themes
+            Action::DesktopSettings(_) => {
+                // WMDE: XDG portal settings events are ignored; the WMDE config is
+                // authoritative for theme mode and accent. The portal subscription
+                // is not started (see subscription()); this arm satisfies the enum.
             }
 
             Action::ToolkitConfig(config) => {

@@ -90,27 +90,27 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             size: Size::PanelSize(
-                std::env::var("COSMIC_PANEL_SIZE")
+                std::env::var("WMDE_PANEL_SIZE")
                     .ok()
                     .and_then(|size| ron::from_str(size.as_str()).ok())
                     .unwrap_or(PanelSize::S),
             ),
-            anchor: std::env::var("COSMIC_PANEL_ANCHOR")
+            anchor: std::env::var("WMDE_PANEL_ANCHOR")
                 .ok()
                 .and_then(|size| ron::from_str(size.as_str()).ok())
                 .unwrap_or(PanelAnchor::Top),
-            spacing: std::env::var("COSMIC_PANEL_SPACING")
+            spacing: std::env::var("WMDE_PANEL_SPACING")
                 .ok()
                 .and_then(|size| ron::from_str(size.as_str()).ok())
                 .unwrap_or(4),
-            background: std::env::var("COSMIC_PANEL_BACKGROUND")
+            background: std::env::var("WMDE_PANEL_BACKGROUND")
                 .ok()
                 .and_then(|size| ron::from_str(size.as_str()).ok())
                 .unwrap_or(CosmicPanelBackground::ThemeDefault),
-            output_name: std::env::var("COSMIC_PANEL_OUTPUT").unwrap_or_default(),
-            panel_type: PanelType::from(std::env::var("COSMIC_PANEL_NAME").unwrap_or_default()),
+            output_name: std::env::var("WMDE_PANEL_OUTPUT").unwrap_or_default(),
+            panel_type: PanelType::from(std::env::var("WMDE_PANEL_NAME").unwrap_or_default()),
             padding_overlap: str::parse(
-                &std::env::var("COSMIC_PANEL_PADDING_OVERLAP").unwrap_or_default(),
+                &std::env::var("WMDE_PANEL_PADDING_OVERLAP").unwrap_or_default(),
             )
             .unwrap_or(0.0),
             suggested_bounds: None,

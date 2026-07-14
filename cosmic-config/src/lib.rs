@@ -211,7 +211,7 @@ impl Config {
         #[cfg(windows)]
         let system_path =
             known_folders::get_known_folder_path(known_folders::KnownFolder::ProgramFilesCommon)
-                .map(|x| x.join("COSMIC").join(&path));
+                .map(|x| x.join("WMDE").join(&path));
 
         Ok(Self {
             system_path,
@@ -244,7 +244,7 @@ impl Config {
         #[cfg(windows)]
         let system_path =
             known_folders::get_known_folder_path(known_folders::KnownFolder::ProgramFilesCommon)
-                .map(|x| x.join("COSMIC").join(&path));
+                .map(|x| x.join("WMDE").join(&path));
 
         // Get libcosmic user configuration directory
         let mut user_path = get_config_dir().ok_or(Error::NoConfigDirectory)?;

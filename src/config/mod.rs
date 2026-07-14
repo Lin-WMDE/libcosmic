@@ -117,7 +117,7 @@ impl Default for CosmicTk {
             apply_theme_global: false,
             show_minimize: true,
             show_maximize: true,
-            icon_theme: String::from("WMDE"),
+            icon_theme: String::from(crate::icon_theme::COSMIC),
             header_size: Density::Standard,
             interface_density: Density::Standard,
             interface_font: FontConfig {

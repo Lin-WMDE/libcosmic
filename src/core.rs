@@ -9,7 +9,6 @@ use cosmic_theme::ThemeMode;
 use enumflags2::{self, BitFlags, bitflags};
 use iced::{Limits, Size, window};
 use iced_core::window::Id;
-use palette::Srgba;
 use slotmap::Key;
 
 use crate::Theme;
@@ -87,10 +86,6 @@ pub struct Core {
 
     /// Configured theme mode
     pub(super) system_theme_mode: ThemeMode,
-
-    pub(super) portal_is_dark: Option<bool>,
-
-    pub(super) portal_accent: Option<Srgba>,
 
     pub(super) portal_is_high_contrast: Option<bool>,
 
@@ -181,8 +176,6 @@ impl Default for Core {
             single_instance: false,
             #[cfg(all(feature = "dbus-config", target_os = "linux"))]
             settings_daemon: None,
-            portal_is_dark: None,
-            portal_accent: None,
             portal_is_high_contrast: None,
             main_window: None,
             exit_on_main_window_closed: true,
@@ -444,9 +437,8 @@ impl Core {
     #[inline]
     pub fn system_is_dark(&self) -> bool {
         // WMDE: the desktop config (system_theme_mode) is authoritative for our own
-        // apps' theme. The XDG Settings portal (portal_is_dark) is only a bridge for
-        // external apps and its live stream can lag/stick, so don't let it override the
-        // config for our rendering.
+        // apps' theme. The XDG Settings portal is only a bridge for external apps,
+        // so it must not override the config for our rendering.
         self.system_theme_mode.is_dark
     }
 
