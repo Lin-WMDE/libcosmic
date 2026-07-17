@@ -141,6 +141,10 @@ pub struct Theme {
     #[serde(with = "color_serde_option")]
     #[cosmic_config_entry(with = ColorReprOption)]
     pub text_tint: Option<Srgb>,
+    /// WMDE: CSD header bar inner padding as (top, right, bottom, left).
+    /// Defaults to `(0, 0, 0, 0)`, which keeps the toolkit default; set any
+    /// non-zero value in the theme to override it (header height follows).
+    pub header_padding: (u16, u16, u16, u16),
 }
 
 impl Default for Theme {
@@ -1612,6 +1616,9 @@ impl ThemeBuilder {
                     is_high_contrast,
                 )
             },
+            // WMDE: not exposed through ThemeBuilder; read straight from the theme
+            // config file at runtime. (0, 0, 0, 0) => keep the toolkit padding.
+            header_padding: (0, 0, 0, 0),
         };
         theme.spacing = spacing;
         theme.corner_radii = corner_radii;
