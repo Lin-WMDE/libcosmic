@@ -136,7 +136,7 @@ pub use dbus_activation::DbusActivation;
 #[cfg(feature = "desktop")]
 pub mod desktop;
 
-#[cfg(any(feature = "xdg-portal", feature = "rfd"))]
+#[cfg(any(xdg_portal, feature = "rfd"))]
 pub mod dialog;
 
 pub mod executor;
@@ -162,7 +162,7 @@ pub(crate) mod malloc;
 pub mod process;
 
 #[doc(inline)]
-#[cfg(all(feature = "wayland", target_os = "linux"))]
+#[cfg(wayland_platform)]
 pub use cctk;
 
 pub mod surface;

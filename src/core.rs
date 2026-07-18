@@ -38,8 +38,8 @@ pub struct Window {
     pub show_close: bool,
     pub show_maximize: bool,
     pub show_minimize: bool,
-    pub transparent_header: bool,
     pub is_maximized: bool,
+    pub border_padding: Option<u16>,
     height: f32,
     width: f32,
 }
@@ -165,9 +165,9 @@ impl Default for Core {
                 show_minimize: true,
                 show_window_menu: false,
                 is_maximized: false,
-                transparent_header: false,
                 height: 0.,
                 width: 0.,
+                border_padding: None,
             },
             focused_window: Vec::new(),
             #[cfg(feature = "applet")]
@@ -516,7 +516,7 @@ impl Core {
         crate::command::toggle_maximize(id)
     }
 
-    #[cfg(all(feature = "wayland", target_os = "linux"))]
+    #[cfg(wayland_platform)]
     pub fn sync_window_border_radii_to_theme(&self) -> bool {
         match self.app_type {
             AppType::Window => self.auto_corner_radius.contains(Auto::Window),
@@ -586,7 +586,7 @@ impl Core {
 
     /// Calculate suggested corners for each app type main window
     #[must_use]
-    #[cfg(all(feature = "wayland", target_os = "linux"))]
+    #[cfg(wayland_platform)]
     pub fn corners(
         &self,
         theme: &Theme,
