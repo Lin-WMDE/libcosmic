@@ -18,14 +18,19 @@ pub struct CornerRadii {
 }
 
 impl Default for CornerRadii {
+    // WMDE: Windows-11-like default radii. Menus/popups/windows get a small ~8px
+    // round (radius_m/l), selections and buttons are square (radius_xl -> 0), and
+    // radius_s stays small so app windows round ~8px (core.rs adds +4). This is the
+    // WMDE toolkit default, and - since the theme's shipped system default is not
+    // honored at runtime (only user overrides are) - it is what a clean install sees.
     fn default() -> Self {
         Self {
             radius_0: [0.0; 4],
             radius_xs: [4.0; 4],
-            radius_s: [8.0; 4],
-            radius_m: [16.0; 4],
-            radius_l: [32.0; 4],
-            radius_xl: [160.0; 4],
+            radius_s: [4.0; 4],
+            radius_m: [8.0; 4],
+            radius_l: [8.0; 4],
+            radius_xl: [0.0; 4],
         }
     }
 }
