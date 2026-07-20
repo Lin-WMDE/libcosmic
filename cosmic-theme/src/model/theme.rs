@@ -1626,8 +1626,11 @@ impl ThemeBuilder {
                 )
             },
             // WMDE: not exposed through ThemeBuilder; read straight from the theme
-            // config file at runtime. (0, 0, 0, 0) => keep the toolkit padding.
-            header_padding: (0, 0, 0, 0),
+            // config file at runtime. (0, 0, 0, 0) would mean "keep the toolkit
+            // padding"; we set (top, right, bottom, left) = (7, 7, 0, 7) so the header
+            // bar has no bottom padding and title-bar tabs sit flush on the strip below
+            // (removes the dark gap between the active tab and the menu row in Files).
+            header_padding: (7, 7, 0, 7),
         };
         theme.spacing = spacing;
         theme.corner_radii = corner_radii;
