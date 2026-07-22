@@ -124,6 +124,11 @@ pub struct HeaderBarWidget<'a, Message> {
     start: Element<'a, Message>,
     center: Option<Element<'a, Message>>,
     end: Element<'a, Message>,
+    /// WMDE: the window controls are a region of their own, so they can sit flush
+    /// in the corner while everything else stays inside `padding`.
+    controls: Element<'a, Message>,
+    /// WMDE: header padding, applied here instead of by the wrapping container.
+    padding: [u16; 4],
 }
 
 impl<'a, Message> HeaderBarWidget<'a, Message> {
@@ -131,19 +136,29 @@ impl<'a, Message> HeaderBarWidget<'a, Message> {
         start: Element<'a, Message>,
         center: Option<Element<'a, Message>>,
         end: Element<'a, Message>,
+        controls: Element<'a, Message>,
+        padding: [u16; 4],
     ) -> Self {
-        Self { start, center, end }
+        Self {
+            start,
+            center,
+            end,
+            controls,
+            padding,
+        }
     }
 
     fn elems(&self) -> impl Iterator<Item = &Element<'a, Message>> {
         std::iter::once(&self.start)
             .chain(std::iter::once(&self.end))
+            .chain(std::iter::once(&self.controls))
             .chain(self.center.as_ref())
     }
 
     fn elems_mut(&mut self) -> impl Iterator<Item = &mut Element<'a, Message>> {
         std::iter::once(&mut self.start)
             .chain(std::iter::once(&mut self.end))
+            .chain(std::iter::once(&mut self.controls))
             .chain(self.center.as_mut())
     }
 }
@@ -153,9 +168,14 @@ impl<'a, Message: Clone + 'static> Widget<Message, crate::Theme, crate::Renderer
 {
     fn diff(&mut self, tree: &mut tree::Tree) {
         if let Some(center) = &mut self.center {
-            tree.diff_children(&mut [&mut self.start, &mut self.end, center]);
+            tree.diff_children(&mut [
+                &mut self.start,
+                &mut self.end,
+                &mut self.controls,
+                center,
+            ]);
         } else {
-            tree.diff_children(&mut [&mut self.start, &mut self.end]);
+            tree.diff_children(&mut [&mut self.start, &mut self.end, &mut self.controls]);
         }
     }
 
@@ -180,48 +200,71 @@ impl<'a, Message: Clone + 'static> Widget<Message, crate::Theme, crate::Renderer
         let height = limits.max().height;
         let gap = 8.0;
 
-        let end_node =
-            self.end
-                .as_widget_mut()
-                .layout(&mut tree.children[1], renderer, &limits.loose());
+        let [pad_top, pad_right, pad_bottom, pad_left] = self.padding.map(f32::from);
+
+        // WMDE: the window controls run the full height of the bar and sit flush in
+        // its top-right corner, Windows-style, so they ignore the header padding.
+        // Everything else is laid out inside it, to the left of them.
+        let controls_node = self.controls.as_widget_mut().layout(
+            &mut tree.children[2],
+            renderer,
+            &layout::Limits::new(Size::ZERO, Size::new(width, height)),
+        );
+        let controls_width = controls_node.size().width;
+
+        let inner_height = (height - pad_top - pad_bottom).max(0.0);
+        let inner_right = (width - controls_width - pad_right).max(pad_left);
+
+        let end_node = self.end.as_widget_mut().layout(
+            &mut tree.children[1],
+            renderer,
+            &layout::Limits::new(Size::ZERO, Size::new(inner_right - pad_left, inner_height)),
+        );
         let end_width = end_node.size().width;
 
-        let start_available = (width - end_width - gap).max(0.0);
+        let start_available = (inner_right - end_width - gap - pad_left).max(0.0);
         let start_node = self.start.as_widget_mut().layout(
             &mut tree.children[0],
             renderer,
-            &layout::Limits::new(Size::ZERO, Size::new(start_available, height)),
+            &layout::Limits::new(Size::ZERO, Size::new(start_available, inner_height)),
         );
         let start_width = start_node.size().width;
 
         let vcenter = |node: layout::Node, x: f32| -> layout::Node {
-            let dy = ((height - node.size().height) / 2.0).max(0.0);
+            let dy = pad_top + ((inner_height - node.size().height) / 2.0).max(0.0);
             node.translate(Vector::new(x, dy))
         };
 
-        let mut child_nodes = Vec::with_capacity(3);
-        child_nodes.push(vcenter(start_node, 0.0));
-        child_nodes.push(vcenter(end_node, width - end_width));
+        let mut child_nodes = Vec::with_capacity(4);
+        child_nodes.push(vcenter(start_node, pad_left));
+        child_nodes.push(vcenter(end_node, inner_right - end_width));
+        child_nodes.push(controls_node.translate(Vector::new(width - controls_width, 0.0)));
 
         if let Some(center) = &mut self.center {
-            let slot_start = start_width + gap;
-            let slot_end = (width - end_width - gap).max(slot_start);
+            let slot_start = pad_left + start_width + gap;
+            let slot_end = (inner_right - end_width - gap).max(slot_start);
             let slot_width = slot_end - slot_start;
             // this instead of `node.size().width` prevents center jitter as text ellipsizes
             let natural_width = center
                 .as_widget_mut()
-                .layout(&mut tree.children[2], renderer, &limits.loose())
+                .layout(
+                    &mut tree.children[3],
+                    renderer,
+                    &layout::Limits::new(Size::ZERO, Size::new(width, inner_height)),
+                )
                 .size()
                 .width;
 
             let node = center.as_widget_mut().layout(
-                &mut tree.children[2],
+                &mut tree.children[3],
                 renderer,
-                &layout::Limits::new(Size::ZERO, Size::new(slot_width, height)),
+                &layout::Limits::new(Size::ZERO, Size::new(slot_width, inner_height)),
             );
 
+            // Centered on the window, not on the free slot, unless that would run
+            // into the regions on either side.
             let ideal_x = (width - natural_width) / 2.0;
-            let max_x = (width - end_width - gap - natural_width).max(slot_start);
+            let max_x = (slot_end - natural_width).max(slot_start);
             let center_x = ideal_x.clamp(slot_start, max_x);
 
             child_nodes.push(vcenter(node, center_x))
@@ -372,10 +415,7 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
         // Take ownership of the regions to be packed.
         let start = std::mem::take(&mut self.start);
         let center = std::mem::take(&mut self.center);
-        let mut end = std::mem::take(&mut self.end);
-
-        // Also packs the window controls at the very end.
-        end.push(self.window_controls(space_xxs));
+        let end = std::mem::take(&mut self.end);
 
         let padding = if is_ssd {
             [2, 8, 2, 8]
@@ -395,8 +435,17 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
         // bottom gap so title-bar tabs sit flush on the strip below). Height is
         // recomputed from padding, so it tracks the override automatically.
         // `[0, 0, 0, 0]` (the default) means "unset" -> keep the toolkit padding.
+        // Server-side decorations are exempt: the compositor sizes that title bar
+        // to a fixed height of its own, and a taller header would be clipped.
         let hp = theme::header_padding();
-        let padding = if hp == [0, 0, 0, 0] { padding } else { hp };
+        let padding = if is_ssd || hp == [0, 0, 0, 0] {
+            padding
+        } else {
+            hp
+        };
+
+        let height = 32.0 + f32::from(padding[0]) + f32::from(padding[2]);
+        let controls = self.window_controls(height);
 
         let start = widget::row::with_children(start)
             .spacing(space_xxxs)
@@ -424,15 +473,14 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
             .align_y(iced::Alignment::Center)
             .into();
 
-        let mut widget = HeaderBarWidget::new(start, center, end)
+        let mut widget = HeaderBarWidget::new(start, center, end, controls, padding)
             .apply(widget::container)
             .class(theme::Container::HeaderBar {
                 focused: self.focused,
                 sharp_corners: self.sharp_corners,
                 transparent: if is_ssd { false } else { true },
             })
-            .height(Length::Fixed(32.0 + padding[0] as f32 + padding[2] as f32))
-            .padding(padding)
+            .height(Length::Fixed(height))
             .apply(widget::mouse_area);
 
         if let Some(message) = self.on_drag {
@@ -452,38 +500,63 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
     }
 
     /// Creates the widget for window controls.
-    fn window_controls(&mut self, spacing: u16) -> Element<'a, Message> {
-        macro_rules! icon {
-            ($name:expr, $size:expr, $on_press:expr) => {{
-                widget::icon::from_name($name)
-                    .apply(widget::button::icon)
-                    .padding(8)
-                    .class(theme::Button::HeaderBar)
-                    .selected(self.focused)
-                    .icon_size($size)
-                    .on_press($on_press)
-            }};
+    ///
+    /// WMDE: Windows-style caption buttons - a 46px-wide rectangle each, running
+    /// the full height of the bar, packed edge to edge with no gap. `height` is
+    /// the height of the header bar they are packed into.
+    fn window_controls(&mut self, height: f32) -> Element<'a, Message> {
+        /// Width of one caption button, as in Windows.
+        const WIDTH: f32 = 46.0;
+        /// Glyphs are drawn 10px inside a 16px box, again as in Windows.
+        const ICON_SIZE: u16 = 16;
+
+        let mut controls: Vec<(&'static str, bool, Message)> = Vec::with_capacity(3);
+
+        if let Some(message) = self.on_minimize.take() {
+            controls.push(("wmde-window-minimize-symbolic", false, message));
         }
 
-        widget::row::with_capacity(3)
-            .push_maybe(
-                self.on_minimize
-                    .take()
-                    .map(|m| icon!("window-minimize-symbolic", 16, m)),
-            )
-            .push_maybe(self.on_maximize.take().map(|m| {
-                if self.maximized {
-                    icon!("window-restore-symbolic", 16, m)
-                } else {
-                    icon!("window-maximize-symbolic", 16, m)
-                }
-            }))
-            .push_maybe(
-                self.on_close
-                    .take()
-                    .map(|m| icon!("window-close-symbolic", 16, m)),
-            )
-            .spacing(spacing)
+        if let Some(message) = self.on_maximize.take() {
+            let name = if self.maximized {
+                "wmde-window-restore-symbolic"
+            } else {
+                "wmde-window-maximize-symbolic"
+            };
+
+            controls.push((name, false, message));
+        }
+
+        if let Some(message) = self.on_close.take() {
+            controls.push(("wmde-window-close-symbolic", true, message));
+        }
+
+        // Only the rightmost button touches the window corner, and only a window
+        // with rounded corners needs its fill rounded to match.
+        let last = controls.len().wrapping_sub(1);
+        let rounded = !self.sharp_corners;
+        let focused = self.focused;
+
+        let controls: Vec<Element<'a, Message>> = controls
+            .into_iter()
+            .enumerate()
+            .map(|(i, (name, close, message))| {
+                widget::icon::from_name(name)
+                    .apply(widget::button::icon)
+                    .icon_size(ICON_SIZE)
+                    .width(Length::Fixed(WIDTH))
+                    .height(Length::Fixed(height))
+                    .padding([0.0, (WIDTH - f32::from(ICON_SIZE)) / 2.0])
+                    .class(theme::Button::WindowControl {
+                        close,
+                        round_corner: rounded && i == last,
+                    })
+                    .selected(focused)
+                    .on_press(message)
+                    .into()
+            })
+            .collect();
+
+        widget::row::with_children(controls)
             .align_y(iced::Alignment::Center)
             .into()
     }
