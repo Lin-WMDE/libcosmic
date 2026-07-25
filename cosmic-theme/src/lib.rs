@@ -21,4 +21,7 @@ pub mod steps;
 /// name of cosmic theme
 pub const NAME: &str = "fun.wmde.Theme";
 
+/// name of the WMDE icon theme (its directory under `/usr/share/icons`)
+pub const ICON_THEME: &str = "WMDE";
+
 pub use palette;

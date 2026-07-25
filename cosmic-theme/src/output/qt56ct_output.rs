@@ -153,7 +153,10 @@ inactive_colors={}
             .unwrap_or_default();
 
         let color_scheme_path = Self::get_qpalette_path(ct, is_dark)?;
-        let icon_theme = if is_dark { "breeze-dark" } else { "breeze" };
+        // WMDE ships a single icon theme (/usr/share/icons/WMDE) with no dark variant,
+        // so light and dark mode use the same name. Restore an `if is_dark` branch here
+        // if a WMDE-dark theme is ever shipped.
+        let icon_theme = crate::ICON_THEME;
 
         ini.set(
             "Appearance",
@@ -171,7 +174,7 @@ inactive_colors={}
             );
             // Enable the above color scheme, instead of using the default color scheme of e.g. Breeze
             ini.setstr("Appearance", "custom_palette", Some("true"));
-            // COSMIC icons are stuck in light mode, so use breeze icons instead
+            // Use the WMDE icon theme so Qt apps match GTK and the WMDE apps
             ini.setstr("Appearance", "icon_theme", Some(icon_theme));
             // Use COSMIC dialogs instead of KDE's
             ini.setstr("Appearance", "standard_dialogs", Some("xdgdesktopportal"));
@@ -191,10 +194,13 @@ inactive_colors={}
                 );
             }
 
+            // Only claim icon_theme while it still holds a value we wrote ourselves:
+            // breeze/breeze-dark from older builds, or the WMDE theme. Anything else is
+            // the user's own pick from Settings and must survive a light/dark switch.
             let old_icon_theme = ini
                 .get("Appearance", "icon_theme")
                 .unwrap_or_else(|| "breeze".to_owned());
-            if old_icon_theme.contains("breeze") {
+            if old_icon_theme.contains("breeze") || old_icon_theme == icon_theme {
                 ini.setstr("Appearance", "icon_theme", Some(icon_theme));
             }
         }
