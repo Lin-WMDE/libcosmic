@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use crate::widget::nav_bar;
 use cosmic_config::CosmicConfigEntry;
 use cosmic_theme::ThemeMode;
-use enumflags2::{self, BitFlags, bitflags};
-use iced::{Limits, Size, window};
+use enumflags2::{self, bitflags, BitFlags};
+use iced::{window, Limits, Size};
 use iced_core::window::Id;
 use slotmap::Key;
 
@@ -643,22 +643,17 @@ impl Core {
                 bottom_right: radius_l[2].round() as u32,
                 bottom_left: radius_l[3].round() as u32,
             }
-        } else if let AppType::Window = self.app_type
-            && !rounded
-        {
-            let radius_0 = theme.radius_0();
-            iced_runtime::platform_specific::wayland::CornerRadius {
-                top_left: radius_0[0].round() as u32,
-                top_right: radius_0[1].round() as u32,
-                bottom_right: radius_0[2].round() as u32,
-                bottom_left: radius_0[3].round() as u32,
-            }
         } else {
-            // WMDE: per corner, so a snapped window squares only the corners that touch the
-            // screen. With the theme's gaps turned up nothing is flush and all four stay round.
-            let radius_s = self.square_flush_corners(
-                theme.radius_s().map(|x| if x < 4.0 { x } else { x + 4.0 }),
-            );
+            // WMDE: no all-or-nothing branch on `rounded` any more. Which corners survive is
+            // decided per corner by which edges are flush: a maximized window reports all four
+            // and comes out square anyway, while one snapped to half the screen keeps the two
+            // corners facing the desktop. With the theme's gaps turned up nothing is flush and
+            // all four stay round.
+            let _ = rounded;
+            let radius_s =
+                self.square_flush_corners(
+                    theme.radius_s().map(|x| if x < 4.0 { x } else { x + 4.0 }),
+                );
             iced_runtime::platform_specific::wayland::CornerRadius {
                 top_left: radius_s[0].round() as u32,
                 top_right: radius_s[1].round() as u32,
