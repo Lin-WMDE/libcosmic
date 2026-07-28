@@ -806,6 +806,19 @@ impl<T: Application> Cosmic<T> {
                             | WindowState::TILED_TOP
                             | WindowState::TILED_BOTTOM,
                     );
+                    // WMDE: keep the edges apart as well as the summary. The compositor reports
+                    // only the edges actually flush with the work area, which is what decides
+                    // per-corner rounding; collapsing them to one boolean throws that away.
+                    // Anything fully covering the screen counts as flush on all four.
+                    let all = state.intersects(
+                        WindowState::MAXIMIZED | WindowState::FULLSCREEN | WindowState::TILED,
+                    );
+                    self.app.core_mut().window.tiled_edges = [
+                        all || state.contains(WindowState::TILED_TOP),
+                        all || state.contains(WindowState::TILED_RIGHT),
+                        all || state.contains(WindowState::TILED_BOTTOM),
+                        all || state.contains(WindowState::TILED_LEFT),
+                    ];
                     self.app.core_mut().window.is_maximized =
                         state.intersects(WindowState::MAXIMIZED | WindowState::FULLSCREEN);
                 }
