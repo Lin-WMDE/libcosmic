@@ -764,15 +764,14 @@ impl<App: Application> ApplicationExt for App {
         // Ensures visually aligned radii for content and window corners.
         // WMDE: squared per corner, not all-or-nothing - a window snapped to half the screen
         // keeps the two corners facing the desktop rounded.
-        // WMDE: squared per corner rather than all-or-nothing on sharp_corners - a window
-        // snapped to half the screen keeps the two corners facing the desktop rounded. A
-        // maximized one reports every edge as flush, so it still comes out square.
-        let window_corner_radius = core.square_flush_corners(
+        let window_corner_radius = core.square_flush_corners(if sharp_corners {
+            crate::theme::active().cosmic().radius_0()
+        } else {
             crate::theme::active()
                 .cosmic()
                 .radius_s()
-                .map(|x| if x < 4.0 { x } else { x + 4.0 }),
-        );
+                .map(|x| if x < 4.0 { x } else { x + 4.0 })
+        });
 
         let view_column = crate::widget::column::with_capacity(2)
             .push_maybe(if core.window.show_headerbar {
