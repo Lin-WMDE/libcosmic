@@ -32,11 +32,6 @@ pub struct Window {
     pub content_container: bool,
     pub context_is_overlay: bool,
     pub sharp_corners: bool,
-    /// WMDE: which window edges the compositor reports as flush with the screen's work area,
-    /// as `[top, right, bottom, left]`. A corner is squared when either of the edges meeting
-    /// at it is flush, so a window snapped to half the screen keeps the two corners that face
-    /// into the desktop rounded. All false while floating.
-    pub tiled_edges: [bool; 4],
     pub show_context: bool,
     pub show_headerbar: bool,
     pub show_window_menu: bool,
@@ -163,7 +158,6 @@ impl Default for Core {
                 content_container: true,
                 context_is_overlay: true,
                 sharp_corners: false,
-                tiled_edges: [false; 4],
                 show_context: false,
                 show_headerbar: true,
                 show_close: true,
@@ -604,25 +598,6 @@ impl Core {
         }
     }
 
-    /// WMDE: zero the corners whose adjacent edges are flush with the screen.
-    ///
-    /// Order is `[top_left, top_right, bottom_right, bottom_left]`, matching the corner-radius
-    /// protocol. A corner survives only if neither edge meeting at it is flush - snap a window
-    /// to the left half and the two corners facing the middle of the desktop stay round.
-    ///
-    /// Not gated on wayland: the drawn radii go through it on every platform.
-    #[must_use]
-    pub fn square_flush_corners(&self, radii: [f32; 4]) -> [f32; 4] {
-        let [top, right, bottom, left] = self.window.tiled_edges;
-        let keep = |flush: bool, r: f32| if flush { 0.0 } else { r };
-        [
-            keep(top || left, radii[0]),
-            keep(top || right, radii[1]),
-            keep(bottom || right, radii[2]),
-            keep(bottom || left, radii[3]),
-        ]
-    }
-
     /// Calculate suggested corners for each app type main window
     #[must_use]
     #[cfg(wayland_platform)]
@@ -654,11 +629,7 @@ impl Core {
                 bottom_left: radius_0[3].round() as u32,
             }
         } else {
-            // WMDE: per corner, so a snapped window squares only the corners that touch the
-            // screen. With the theme's gaps turned up nothing is flush and all four stay round.
-            let radius_s = self.square_flush_corners(
-                theme.radius_s().map(|x| if x < 4.0 { x } else { x + 4.0 }),
-            );
+            let radius_s = theme.radius_s().map(|x| if x < 4.0 { x } else { x + 4.0 });
             iced_runtime::platform_specific::wayland::CornerRadius {
                 top_left: radius_s[0].round() as u32,
                 top_right: radius_s[1].round() as u32,
