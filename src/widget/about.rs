@@ -43,6 +43,14 @@ pub struct About {
     links: Vec<(String, String)>,
 }
 
+impl About {
+    /// The application's name.
+    #[must_use]
+    pub fn get_name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+}
+
 fn add_contributors(contributors: Vec<(&str, &str)>) -> Vec<(String, String)> {
     contributors
         .into_iter()

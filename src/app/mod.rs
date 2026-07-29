@@ -8,6 +8,8 @@
 
 mod action;
 pub use action::Action;
+#[cfg(all(feature = "about", feature = "multi-window"))]
+pub(crate) mod about_window;
 use cosmic_config::CosmicConfigEntry;
 pub mod context_drawer;
 pub use context_drawer::{ContextDrawer, context_drawer};
@@ -549,6 +551,16 @@ pub trait ApplicationExt: Application {
     /// Set the title of a window.
     fn set_window_title(&mut self, title: String, id: window::Id) -> Task<Self::Message>;
 
+    /// Opens the standard About window, or focuses it if it is already open.
+    ///
+    /// The window is built, rendered and closed by the framework.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    fn open_about(&mut self, about: crate::widget::about::About) -> Task<Self::Message>;
+
+    /// Closes the About window, if it is open.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    fn close_about(&mut self) -> Task<Self::Message>;
+
     /// View template for the main window.
     fn view_main(&self) -> Element<'_, crate::Action<Self::Message>>;
 
@@ -607,6 +619,33 @@ impl<App: Application> ApplicationExt for App {
 
         self.core_mut().title.insert(id, title.clone());
         Task::none()
+    }
+
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    fn open_about(&mut self, about: crate::widget::about::About) -> Task<Self::Message> {
+        if let Some(id) = self.core().about_window_id() {
+            self.core_mut().about = Some(about);
+            return iced::window::gain_focus(id);
+        }
+
+        let title = about_window::title(&about);
+        let (id, task) = iced::window::open(about_window::settings(Self::APP_ID));
+
+        let core = self.core_mut();
+        core.about = Some(about);
+        core.about_window = Some(id);
+        // The title is read once, when the window opens, so it has to be registered
+        // before the open task runs.
+        core.title.insert(id, title);
+
+        task.discard()
+    }
+
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    fn close_about(&mut self) -> Task<Self::Message> {
+        self.core()
+            .about_window_id()
+            .map_or_else(Task::none, iced::window::close)
     }
 
     #[allow(clippy::too_many_lines)]

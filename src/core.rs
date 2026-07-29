@@ -104,6 +104,14 @@ pub struct Core {
 
     pub(crate) main_window: Option<window::Id>,
 
+    /// Content of the About window managed by the framework.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    pub(crate) about: Option<crate::widget::about::About>,
+
+    /// Id of the About window managed by the framework, while it is open.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    pub(crate) about_window: Option<window::Id>,
+
     pub(crate) exit_on_main_window_closed: bool,
 
     pub(crate) menu_bars: HashMap<crate::widget::Id, (Limits, Size)>,
@@ -178,6 +186,10 @@ impl Default for Core {
             settings_daemon: None,
             portal_is_high_contrast: None,
             main_window: None,
+            #[cfg(all(feature = "about", feature = "multi-window"))]
+            about: None,
+            #[cfg(all(feature = "about", feature = "multi-window"))]
+            about_window: None,
             exit_on_main_window_closed: true,
             menu_bars: HashMap::new(),
             auto_blur: Auto::System | Auto::Popup | Auto::Window,
@@ -447,6 +459,14 @@ impl Core {
     #[inline]
     pub fn main_window_id(&self) -> Option<window::Id> {
         self.main_window.filter(|id| iced::window::Id::NONE != *id)
+    }
+
+    /// The [`Id`] of the About window, while it is open.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    #[must_use]
+    #[inline]
+    pub fn about_window_id(&self) -> Option<window::Id> {
+        self.about_window
     }
 
     /// Reset the tracked main window to a new value

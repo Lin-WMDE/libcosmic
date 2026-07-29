@@ -3,7 +3,6 @@
 
 //! Application API example
 
-use cosmic::app::context_drawer::{self, ContextDrawer};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::executor;
 use cosmic::iced::{alignment, Length, Size};
@@ -25,8 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Messages that are used specifically by our [`App`].
 #[derive(Clone, Debug)]
 pub enum Message {
-    ToggleAbout,
-    Open(String),
+    ShowAbout,
 }
 
 /// The [`App`] stores application-specific state.
@@ -34,7 +32,6 @@ pub struct App {
     core: Core,
     nav_model: nav_bar::Model,
     about: About,
-    show_about: bool,
 }
 
 /// Implement [`cosmic::Application`] to integrate with COSMIC.
@@ -81,7 +78,6 @@ impl cosmic::Application for App {
             core,
             nav_model,
             about,
-            show_about: false,
         };
 
         app.set_header_title("COSMIC About Example".into());
@@ -104,34 +100,16 @@ impl cosmic::Application for App {
         Task::none()
     }
 
-    fn context_drawer(&self) -> Option<ContextDrawer<'_, Self::Message>> {
-        self.show_about.then(|| {
-            context_drawer::about(
-                &self.about,
-                |url| Message::Open(url.to_owned()),
-                Message::ToggleAbout,
-            )
-        })
-    }
-
     /// Handle application events here.
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::ToggleAbout => {
-                self.set_show_context(!self.core.window.show_context);
-                self.show_about = !self.show_about;
-            }
-            Message::Open(url) => match open::that_detached(url) {
-                Ok(_) => (),
-                Err(err) => eprintln!("Failed to open URL: {err}"),
-            },
+            Message::ShowAbout => self.open_about(self.about.clone()),
         }
-        Task::none()
     }
 
     /// Creates a view after each update.
     fn view(&self) -> Element<'_, Self::Message> {
-        let show_about_button = widget::button::text("Show about").on_press(Message::ToggleAbout);
+        let show_about_button = widget::button::text("Show about").on_press(Message::ShowAbout);
         let centered = cosmic::widget::container(
             widget::column::with_capacity(1)
                 .push(show_about_button)

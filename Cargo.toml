@@ -20,8 +20,8 @@ default = [
 advanced-shaping = ["iced/advanced-shaping"]
 # Accessibility support
 a11y = ["iced/a11y", "iced_accessibility"]
-# Enable about widget
-about = []
+# Enable about widget and the framework managed About window
+about = ["process"]
 # Builds support for animated images
 animated-image = [
     "dep:async-fs",

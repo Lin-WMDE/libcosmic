@@ -12,6 +12,9 @@ use cosmic_theme::ThemeMode;
 /// A message managed internally by COSMIC.
 #[derive(Clone, Debug)]
 pub enum Action {
+    /// A link was pressed in the About window.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    AboutUrl(String),
     /// Activate the application
     Activate(String),
     /// Application requests theme change.

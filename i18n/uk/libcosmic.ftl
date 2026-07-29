@@ -1,6 +1,8 @@
 # Context Drawer
 close = Закрити
 # About
+about = Про програму
+about-app = Про { $name }
 license = Ліцензія
 links = Ланки
 developers = Розробники

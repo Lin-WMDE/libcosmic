@@ -2,6 +2,8 @@
 close = Close
 
 # About
+about = About
+about-app = About { $name }
 license = License
 links = Links
 developers = Developers

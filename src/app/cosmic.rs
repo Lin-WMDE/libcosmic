@@ -712,6 +712,14 @@ where
         if let Some((_, _, _, Some(v))) = self.surface_views.get(&id) {
             return v(&self.app);
         }
+        // The About window is owned by the framework, so it is dispatched before the
+        // application's own `view_window`, whose default implementation panics.
+        #[cfg(all(feature = "about", feature = "multi-window"))]
+        if self.app.core().about_window_id() == Some(id) {
+            if let Some(about) = self.app.core().about.as_ref() {
+                return crate::app::about_window::view(about);
+            }
+        }
         if self
             .app
             .core()
@@ -769,6 +777,9 @@ impl<T: Application> Cosmic<T> {
                     self.app.core_mut().window.sharp_corners = maximized;
                 }
             }
+
+            #[cfg(all(feature = "about", feature = "multi-window"))]
+            Action::AboutUrl(url) => return crate::app::about_window::open_url(url),
 
             Action::WindowResize(id, width, height) => {
                 if self
@@ -844,6 +855,16 @@ impl<T: Application> Cosmic<T> {
                 }
                 keyboard_nav::Action::FocusPrevious => {
                     return iced::widget::operation::focus_previous().map(crate::Action::Cosmic);
+                }
+                // Keyboard navigation events carry no window id, so the focused window
+                // decides whether Escape belongs to the About window or the application.
+                #[cfg(all(feature = "about", feature = "multi-window"))]
+                keyboard_nav::Action::Escape
+                    if self.app.core().about_window_id().is_some()
+                        && self.app.core().about_window_id()
+                            == self.app.core().focused_window() =>
+                {
+                    return self.app.close_about();
                 }
                 keyboard_nav::Action::Escape => return self.app.on_escape(),
                 keyboard_nav::Action::Search => return self.app.on_search(),
@@ -1163,6 +1184,17 @@ impl<T: Application> Cosmic<T> {
             Action::Surface(action) => return self.surface_update(action),
 
             Action::SurfaceClosed(id) => {
+                // The application never created the About window, so it is cleaned up
+                // here instead of being reported through `on_close_requested`.
+                #[cfg(all(feature = "about", feature = "multi-window"))]
+                if self.app.core().about_window_id() == Some(id) {
+                    let core = self.app.core_mut();
+                    core.about = None;
+                    core.about_window = None;
+                    core.title.remove(&id);
+                    return Task::none();
+                }
+
                 if self.opened_surfaces.get_mut(&id).is_some_and(|v| {
                     *v = v.saturating_sub(1);
                     *v == 0
