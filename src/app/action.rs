@@ -12,6 +12,12 @@ use cosmic_theme::ThemeMode;
 /// A message managed internally by COSMIC.
 #[derive(Clone, Debug)]
 pub enum Action {
+    /// The About window requested to close itself.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    AboutClose,
+    /// The About window's header bar was dragged.
+    #[cfg(all(feature = "about", feature = "multi-window"))]
+    AboutDrag,
     /// A link was pressed in the About window.
     #[cfg(all(feature = "about", feature = "multi-window"))]
     AboutUrl(String),

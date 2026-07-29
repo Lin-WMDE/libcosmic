@@ -716,9 +716,7 @@ where
         // application's own `view_window`, whose default implementation panics.
         #[cfg(all(feature = "about", feature = "multi-window"))]
         if self.app.core().about_window_id() == Some(id) {
-            if let Some(about) = self.app.core().about.as_ref() {
-                return crate::app::about_window::view(about);
-            }
+            return crate::app::about_window::view(self.app.core());
         }
         if self
             .app
@@ -775,6 +773,17 @@ impl<T: Application> Cosmic<T> {
                     .is_some_and(|main_id| main_id == id)
                 {
                     self.app.core_mut().window.sharp_corners = maximized;
+                }
+            }
+
+            #[cfg(all(feature = "about", feature = "multi-window"))]
+            Action::AboutClose => return self.app.close_about(),
+
+            // Never `core.drag(None)`: that falls back to the main window.
+            #[cfg(all(feature = "about", feature = "multi-window"))]
+            Action::AboutDrag => {
+                if let Some(id) = self.app.core().about_window_id() {
+                    return self.app.core().drag(Some(id));
                 }
             }
 
