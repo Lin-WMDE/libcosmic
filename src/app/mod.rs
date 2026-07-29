@@ -11,6 +11,10 @@ pub use action::Action;
 #[cfg(all(feature = "about", feature = "multi-window"))]
 pub(crate) mod about_window;
 use cosmic_config::CosmicConfigEntry;
+#[cfg(feature = "winit")]
+pub mod window_preset;
+#[cfg(feature = "winit")]
+pub use window_preset::{Chrome, WindowPreset};
 pub mod context_drawer;
 pub use context_drawer::{ContextDrawer, context_drawer};
 use iced::application::BootFn;

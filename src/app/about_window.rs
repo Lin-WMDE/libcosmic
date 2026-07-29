@@ -7,42 +7,19 @@
 //! the about widget themselves. The window is dispatched before
 //! [`super::Application::view_window`], so applications never see its id.
 
+use super::window_preset::{Chrome, WindowPreset};
 use crate::{Apply, Core, Element, fl};
 use iced::{Alignment, Length, Size, window};
 
-/// Fixed outer size of the About window.
-const WINDOW_SIZE: Size = Size::new(480.0, 600.0);
+/// Shape of the About window.
+const PRESET: WindowPreset = WindowPreset::dialog(Size::new(480.0, 600.0));
 
 /// Widest the content may get, matching the context drawer's cap.
 const CONTENT_MAX_WIDTH: f32 = 480.0;
 
 /// Settings for the About window of an application.
-#[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
 pub(crate) fn settings(application_id: &str) -> window::Settings {
-    #[allow(unused_mut)]
-    let mut settings = window::Settings {
-        size: WINDOW_SIZE,
-        // Equal minimum and maximum sizes make the compositor treat this as a dialog, so
-        // it floats instead of joining the tiling layout.
-        min_size: Some(WINDOW_SIZE),
-        max_size: Some(WINDOW_SIZE),
-        resizable: false,
-        // Client side decorations, like every other window in the toolkit. With server
-        // side ones the compositor draws minimize and maximize for every decorated
-        // window and reserves a resize border around it, neither of which belongs on a
-        // fixed size dialog.
-        decorations: false,
-        transparent: true,
-        ..Default::default()
-    };
-
-    // Without this the window has no app id at all, so it gets no taskbar icon.
-    #[cfg(target_os = "linux")]
-    {
-        settings.platform_specific.application_id = application_id.to_string();
-    }
-
-    settings
+    PRESET.settings(application_id)
 }
 
 /// Title of the About window.
@@ -57,28 +34,13 @@ pub(crate) fn title(about: &crate::widget::about::About) -> String {
 
 /// View for the About window.
 pub(crate) fn view<M: Clone + 'static>(core: &Core) -> Element<'_, crate::Action<M>> {
-    let Some(about) = core.about.as_ref() else {
+    let (Some(about), Some(id)) = (core.about.as_ref(), core.about_window_id()) else {
         return crate::widget::space::horizontal().into();
     };
 
     let cosmic_theme::Spacing {
         space_l, space_m, ..
     } = crate::theme::spacing();
-
-    let window_id = core.about_window_id();
-    let focused = core.focus_chain().iter().any(|id| Some(*id) == window_id);
-
-    // Deliberately no maximize, no minimize and no double click to maximize: the window
-    // has one fixed size.
-    let header = crate::widget::header_bar()
-        .title(
-            window_id
-                .and_then(|id| core.title.get(&id))
-                .map_or("", String::as_str),
-        )
-        .focused(focused)
-        .on_close(crate::Action::Cosmic(super::Action::AboutClose))
-        .on_drag(crate::Action::Cosmic(super::Action::AboutDrag));
 
     // The about widget is only the content column: the padding, the width cap, the
     // scrollbar and the background were all supplied by the context drawer before.
@@ -95,33 +57,17 @@ pub(crate) fn view<M: Clone + 'static>(core: &Core) -> Element<'_, crate::Action
     .apply(crate::widget::scrollable)
     .height(Length::Fill);
 
-    // The same 1px border and corner radius the main window template draws.
-    let window_corner_radius = crate::theme::active()
-        .cosmic()
-        .radius_s()
-        .map(|x| if x < 4.0 { x } else { x + 4.0 });
-
-    crate::widget::column::with_capacity(2)
-        .push(header)
-        .push(content)
-        .apply(crate::widget::container)
-        .padding(1)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .class(crate::theme::Container::custom(move |theme| {
-            crate::widget::container::Style {
-                background: Some(iced::Background::Color(
-                    theme.cosmic().background(theme.transparent).base.into(),
-                )),
-                border: iced::Border {
-                    color: theme.cosmic().bg_divider().into(),
-                    width: 1.0,
-                    radius: window_corner_radius.into(),
-                },
-                ..Default::default()
-            }
-        }))
-        .into()
+    // Deliberately no maximize: a dialog preset draws none, and the window has one size.
+    PRESET.view(
+        core,
+        id,
+        Chrome::new(
+            core.title.get(&id).map_or("", String::as_str),
+            crate::Action::Cosmic(super::Action::AboutClose),
+            crate::Action::Cosmic(super::Action::AboutDrag),
+        ),
+        content,
+    )
 }
 
 /// Opens a link from the About window in the user's preferred application.
