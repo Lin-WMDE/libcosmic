@@ -1,7 +1,11 @@
 [submodule "iced"]
 	path = iced
-	url = https://github.com/pop-os/iced.git
-	branch = master
+	# WMDE: our own fork, because the vendored iced now carries WMDE patches (the
+	# wgpu software-adapter filter and the Vulkan-only backend set). Upstream
+	# pop-os/iced stays reachable inside the submodule as the `upstream` remote,
+	# so syncing is still a plain fetch + merge.
+	url = https://github.com/Lin-WMDE/iced.git
+	branch = wmde
 [submodule "icon-theme"]
 	path = cosmic-icons
 	url = https://github.com/pop-os/cosmic-icons
