@@ -20,14 +20,18 @@ pub fn horizontal<SelectionMode: Default, Message: Clone + 'static>(
 where
     Model<SelectionMode>: Selectable,
 {
-    let space_s = crate::theme::spacing().space_s;
     let space_xs = crate::theme::spacing().space_xs;
 
     segmented_button::horizontal(model)
         .minimum_button_width(76)
         .maximum_button_width(250)
         .button_height(44)
-        .button_padding([space_s, space_xs, space_s, space_xs])
+        // WMDE: Windows tab metrics. Side padding is 12 rather than 16, and the label
+        // of the active tab keeps the regular weight: Explorer marks the active tab by
+        // the fill that merges into the strip below it, not by a heavier label. The
+        // label size itself comes from the segmented button default, now 12px.
+        .button_padding([space_xs, space_xs, space_xs, space_xs])
+        .font_active(crate::font::default())
         .style(crate::theme::SegmentedButton::TabBar)
 }
 
@@ -42,13 +46,14 @@ where
     Model<SelectionMode>: Selectable,
     SelectionMode: Default,
 {
-    let space_s = crate::theme::spacing().space_s;
     let space_xs = crate::theme::spacing().space_xs;
 
     SegmentedButton::new(model)
         .minimum_button_width(76)
         .maximum_button_width(250)
         .button_height(44)
-        .button_padding([space_s, space_xs, space_s, space_xs])
+        // WMDE: same tab metrics as the horizontal strip above.
+        .button_padding([space_xs, space_xs, space_xs, space_xs])
+        .font_active(crate::font::default())
         .style(crate::theme::SegmentedButton::TabBar)
 }

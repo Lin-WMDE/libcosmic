@@ -87,7 +87,11 @@ impl Default for Settings {
             debug: false,
             default_font: font::default(),
             default_icon_theme: None,
-            default_text_size: 14.0,
+            // WMDE: 12px interface text, as in Windows (Segoe UI 9pt at 96 DPI). The
+            // toolkit default of 14 made every piece of chrome that is sized from the
+            // text - tab labels, buttons, menu rows - about a sixth taller than the
+            // Windows original it is modelled on, even where the boxes matched exactly.
+            default_text_size: 12.0,
             default_mmap_threshold: Some(128 * 1024),
             resizable: Some(8.0),
             scale_factor: std::env::var("COSMIC_SCALE")

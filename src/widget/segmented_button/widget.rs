@@ -232,7 +232,8 @@ where
             font_active: crate::font::semibold(),
             font_hovered: crate::font::default(),
             font_inactive: crate::font::default(),
-            font_size: 14.0,
+            // WMDE: 12px interface text, see `widget::text::heading`.
+            font_size: 12.0,
             height: Length::Shrink,
             width: Length::Fill,
             spacing: 0,
