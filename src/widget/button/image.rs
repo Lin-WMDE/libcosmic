@@ -45,8 +45,9 @@ impl<'a, Message> Button<'a, Message> {
             padding: Padding::from(0),
             spacing: 0,
             icon_size: 16,
-            line_height: 20,
-            font_size: 14,
+            // WMDE: 12px/17 interface text, see `widget::text::heading`.
+            line_height: 17,
+            font_size: 12,
             font_weight: Weight::Normal,
             class: crate::theme::style::Button::Image,
             variant,

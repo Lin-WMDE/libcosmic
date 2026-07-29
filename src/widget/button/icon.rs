@@ -50,8 +50,9 @@ impl<Message> Button<'_, Message> {
             padding: Padding::from(padding),
             spacing: theme.space_xxxs(),
             icon_size: if icon.handle.symbolic { 16 } else { 24 },
-            line_height: 20,
-            font_size: 14,
+            // WMDE: 12px/17 interface text, see `widget::text::heading`.
+            line_height: 17,
+            font_size: 12,
             font_weight: Weight::Normal,
             class: ButtonClass::Icon,
             variant: icon,
@@ -63,10 +64,11 @@ impl<Message> Button<'_, Message> {
         let guard = crate::theme::THEME.lock().unwrap();
         let theme = guard.cosmic();
 
-        self.font_size = 14;
+        // WMDE: 12px/17 interface text, see `widget::text::heading`.
+        self.font_size = 12;
         self.font_weight = Weight::Normal;
         self.icon_size = 16;
-        self.line_height = 20;
+        self.line_height = 17;
         self.padding = Padding::from(theme.space_xxs());
         self.spacing = theme.space_xxxs();
 

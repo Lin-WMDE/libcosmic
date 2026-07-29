@@ -77,8 +77,9 @@ impl<Message> Button<'_, Message> {
             padding: Padding::from([0, theme.space_s()]),
             spacing: theme.space_xxxs(),
             icon_size: 16,
-            line_height: 20,
-            font_size: 14,
+            // WMDE: 12px/17 interface text, see `widget::text::heading`.
+            line_height: 17,
+            font_size: 12,
             font_weight: Weight::Normal,
             class: ButtonClass::Standard,
             variant: text,

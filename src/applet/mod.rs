@@ -191,7 +191,9 @@ impl Context {
             .size(iced_core::Size::new(width, height))
             .size_limits(Limits::NONE.min_height(height).min_width(width))
             .resizable(None)
-            .default_text_size(14.0)
+            // WMDE: 12px, same as application windows - the panel and its popups are
+            // part of the same interface. See `app::Settings::default`.
+            .default_text_size(12.0)
             .default_font(crate::font::default())
             .transparent(true);
         if let Some(theme) = self.theme() {
