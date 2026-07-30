@@ -224,6 +224,22 @@ impl Theme {
 
     #[allow(clippy::doc_markdown)]
     #[inline]
+    /// WMDE: mutable counterpart of [`Self::background`].
+    ///
+    /// Exists for `tools/wmde-theme-gen`, which bakes the shipped palettes: a few
+    /// window-layer values are measured off the Windows 11 reference screenshots
+    /// and cannot be expressed through `ThemeBuilder`, so they are written over
+    /// the derived ones after `build()`.
+    pub fn background_mut(&mut self, transparent: bool) -> &mut Container {
+        if transparent {
+            &mut self.transparent_background
+        } else {
+            &mut self.background
+        }
+    }
+
+    #[allow(clippy::doc_markdown)]
+    #[inline]
     /// get opaque or transparent primary based on whether blur is active
     pub fn primary(&self, transparent: bool) -> &Container {
         if transparent {
