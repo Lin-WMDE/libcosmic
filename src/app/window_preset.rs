@@ -94,6 +94,11 @@ impl WindowPreset {
             min_size,
             max_size,
             resizable: self.is_resizable(),
+            // Load bearing, and not implied by `resizable`. The client side drag-resize
+            // handler decides a window is resizable from `!is_decorated()` alone and
+            // never consults `is_resizable()`, so a non-resizable window keeps showing
+            // resize cursors within this border unless it is zero.
+            resize_border: if self.is_resizable() { 8 } else { 0 },
             decorations: false,
             transparent: true,
             ..Default::default()
