@@ -202,9 +202,11 @@ impl<'a, Message: Clone + 'static> Widget<Message, crate::Theme, crate::Renderer
 
         let [pad_top, pad_right, pad_bottom, pad_left] = self.padding.map(f32::from);
 
-        // WMDE: the window controls run the full height of the bar and sit flush in
-        // its top-right corner, Windows-style, so they ignore the header padding.
-        // Everything else is laid out inside it, to the left of them.
+        // WMDE: the window controls sit flush in the top-right corner of the bar,
+        // Windows-style, so they ignore the header padding and are not centred
+        // vertically like every other region - they are shorter than the bar (see
+        // `window_controls`) and the gap belongs below them. Everything else is laid
+        // out inside the padding, to the left of them.
         let controls_node = self.controls.as_widget_mut().layout(
             &mut tree.children[2],
             renderer,
@@ -501,14 +503,29 @@ impl<'a, Message: Clone + 'static> HeaderBar<'a, Message> {
 
     /// Creates the widget for window controls.
     ///
-    /// WMDE: Windows-style caption buttons - a 46px-wide rectangle each, running
-    /// the full height of the bar, packed edge to edge with no gap. `height` is
-    /// the height of the header bar they are packed into.
+    /// WMDE: Windows-style caption buttons - a 46x28 rectangle each, flush against
+    /// the top right corner of the bar and packed edge to edge with no gap. They do
+    /// NOT run the full height of the bar: measured off `ref/w11/Maximize.png` and
+    /// `Close.png`, the hover fill is 42 device pixels tall at 150%, exactly 28
+    /// logical, with a flat bottom edge and the same height in every column, inside
+    /// a title bar of 37. `height` is that bar height, and only caps the button so a
+    /// theme with a smaller `header_padding` cannot make it overflow.
+    ///
+    /// Nothing here aligns the buttons to the top - `HeaderBarWidget::layout` places
+    /// the controls node at `y = 0` without vertical centring, unlike every other
+    /// region of the bar.
     fn window_controls(&mut self, height: f32) -> Element<'a, Message> {
         /// Width of one caption button, as in Windows.
         const WIDTH: f32 = 46.0;
+        /// Height of the button, which is also the height of its hover fill.
+        const HEIGHT: f32 = 28.0;
         /// Glyphs are drawn 10px inside a 16px box, again as in Windows.
         const ICON_SIZE: u16 = 16;
+
+        // The glyph centres inside the button, so this is what puts it 14 from the top
+        // of the bar. Windows measures 13.3; centring on the full bar would put it at
+        // 19.5, which is where it used to sit.
+        let height = height.min(HEIGHT);
 
         let mut controls: Vec<(&'static str, bool, Message)> = Vec::with_capacity(3);
 
