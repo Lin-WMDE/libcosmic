@@ -86,6 +86,22 @@ impl From<String> for PanelType {
     }
 }
 
+impl PanelType {
+    /// WMDE: what the panel hosting this applet draws as.
+    ///
+    /// `WMDE_PANEL_LOOK` carries a look the panel has already resolved, which is what an
+    /// applet wants: with any number of panels, `WMDE_PANEL_NAME` is an identity like
+    /// `Panel3` and says nothing about appearance. The name remains the fallback, for a
+    /// panel old enough not to export a look.
+    fn from_env() -> Self {
+        match std::env::var("WMDE_PANEL_LOOK").unwrap_or_default().as_str() {
+            "Bar" => Self::Panel,
+            "Island" => Self::Dock,
+            _ => Self::from(std::env::var("WMDE_PANEL_NAME").unwrap_or_default()),
+        }
+    }
+}
+
 impl Default for Context {
     fn default() -> Self {
         Self {
@@ -108,7 +124,7 @@ impl Default for Context {
                 .and_then(|size| ron::from_str(size.as_str()).ok())
                 .unwrap_or(CosmicPanelBackground::ThemeDefault),
             output_name: std::env::var("WMDE_PANEL_OUTPUT").unwrap_or_default(),
-            panel_type: PanelType::from(std::env::var("WMDE_PANEL_NAME").unwrap_or_default()),
+            panel_type: PanelType::from_env(),
             padding_overlap: str::parse(
                 &std::env::var("WMDE_PANEL_PADDING_OVERLAP").unwrap_or_default(),
             )
