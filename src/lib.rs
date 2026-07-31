@@ -165,6 +165,8 @@ pub mod process;
 #[cfg(wayland_platform)]
 pub use cctk;
 
+pub mod shortcuts;
+
 pub mod surface;
 
 pub use iced::Task;
