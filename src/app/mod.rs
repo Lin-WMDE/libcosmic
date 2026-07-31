@@ -134,6 +134,12 @@ impl<A: crate::app::Application> BootFn<cosmic::Cosmic<A>, crate::Action<A::Mess
 ///
 /// Returns error on application failure.
 pub fn run<App: Application>(settings: Settings, flags: App::Flags) -> iced::Result {
+    // WMDE: start scanning the installed fonts now, on its own thread. It is the single
+    // most expensive step of start-up, nothing below depends on it, and left alone it
+    // happens lazily on the first piece of text - by which point the window and the GPU
+    // device already exist and it is pure added latency. See text::prewarm_font_system.
+    iced::advanced::graphics::text::prewarm_font_system();
+
     #[cfg(feature = "desktop")]
     image_extras::register();
 
@@ -203,6 +209,9 @@ where
     App::Flags: CosmicFlags,
     App::Message: Clone + std::fmt::Debug + Send + 'static,
 {
+    // WMDE: see the note in run - same reason, second entry point.
+    iced::advanced::graphics::text::prewarm_font_system();
+
     #[cfg(feature = "desktop")]
     image_extras::register();
 
