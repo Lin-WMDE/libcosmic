@@ -33,12 +33,16 @@ static SEMIBOLD_WEIGHT: LazyLock<RwLock<HashMap<&'static str, Weight>>> =
 
 /// Weight 600, or 700 for a static family that has no face at 600.
 ///
-/// cosmic-text does not remember a failed match. A family with no face at the requested
-/// weight makes it walk the whole font database, fail, and walk it again on the very next
-/// request. Noto Sans - the interface font - carries 400 and 700 and nothing between
-/// (Medium and Black are separate families), so every heading on screen paid for a walk:
-/// one start-up of the file manager produced 42 of them. Asking for 700 asks for the face
-/// cosmic-text settles on anyway, by weight distance, so nothing drawn changes.
+/// Noto Sans, the interface font, has no face at weight 600, and asking for one is not free.
+/// Measured on the VM: one start-up of the file manager logged
+/// `No default font match for Name("Noto Sans") at weight 600` **42 times**, each one a pass
+/// over the font database. With this substitution it logs none, and the rendered window is
+/// identical to the pixel.
+///
+/// The repetition is not simply a missing cache - `get_font_matches` in cosmic-text is
+/// memoized on (family, stretch, style, weight) - but something clears or bypasses that
+/// cache during start-up, and the 42 passes were measured, not deduced. Asking for 700 asks
+/// for the face cosmic-text settles on anyway, by weight distance, so nothing drawn changes.
 ///
 /// A **variable** family is left alone, and the check is built around that. cosmic-text
 /// feeds the requested weight straight into the `wght` axis, so a variable family really
