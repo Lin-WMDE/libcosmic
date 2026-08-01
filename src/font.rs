@@ -31,16 +31,22 @@ pub fn prewarm() {
 static SEMIBOLD_WEIGHT: LazyLock<RwLock<HashMap<&'static str, Weight>>> =
     LazyLock::new(RwLock::default);
 
-/// Weight 600 if the family has a face at 600, and 700 if it does not.
+/// Weight 600, or 700 for a static family that has no face at 600.
 ///
 /// cosmic-text does not remember a failed match. A family with no face at the requested
 /// weight makes it walk the whole font database, fail, and walk it again on the very next
 /// request. Noto Sans - the interface font - carries 400 and 700 and nothing between
 /// (Medium and Black are separate families), so every heading on screen paid for a walk:
-/// one start-up of the file manager produced 42 of them.
+/// one start-up of the file manager produced 42 of them. Asking for 700 asks for the face
+/// cosmic-text settles on anyway, by weight distance, so nothing drawn changes.
 ///
-/// Asking for 700 asks for the face the fallback settles on anyway, by weight distance, so
-/// this changes what is drawn on screen in no way at all.
+/// A **variable** family is left alone, and the check is built around that. cosmic-text
+/// feeds the requested weight straight into the `wght` axis, so a variable family really
+/// does draw 600 at 600 and 700 at 700 - substituting there would make headings visibly
+/// heavier. fontdb has no flag for it and exposes such a family as a single face at its
+/// default weight, so the family is treated as static only when it shows **two or more
+/// distinct weights**. One weight means either a variable family or a family with nothing
+/// to substitute; both are better left as they are.
 fn semibold_weight(font: &Font) -> Weight {
     let Family::Name(family) = font.family else {
         return Weight::Semibold;
@@ -60,19 +66,22 @@ fn semibold_weight(font: &Font) -> Weight {
     let Ok(font_system) = iced::advanced::graphics::text::font_system().try_read() else {
         return Weight::Semibold;
     };
-    let has_semibold = font_system.db().faces().any(|face| {
-        face.weight == iced::advanced::graphics::text::cosmic_text::fontdb::Weight::SEMIBOLD
-            && face
-                .families
-                .iter()
-                .any(|(name, _)| name.as_str() == family)
-    });
-    drop(font_system);
 
-    let weight = if has_semibold {
-        Weight::Semibold
-    } else {
+    use iced::advanced::graphics::text::cosmic_text::fontdb;
+    let mut weights: Vec<u16> = font_system
+        .db()
+        .faces()
+        .filter(|face| face.families.iter().any(|(name, _)| name.as_str() == family))
+        .map(|face| face.weight.0)
+        .collect();
+    drop(font_system);
+    weights.sort_unstable();
+    weights.dedup();
+
+    let weight = if weights.len() >= 2 && !weights.contains(&fontdb::Weight::SEMIBOLD.0) {
         Weight::Bold
+    } else {
+        Weight::Semibold
     };
     if let Ok(mut resolved) = SEMIBOLD_WEIGHT.write() {
         resolved.insert(family, weight);
