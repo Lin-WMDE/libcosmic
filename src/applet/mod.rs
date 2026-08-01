@@ -552,6 +552,9 @@ impl Context {
 ///
 /// Returns error on application failure.
 pub fn run<App: Application>(flags: App::Flags) -> iced::Result {
+    // WMDE: see the note in app::run - an applet pays the same font scan as an application.
+    iced::advanced::graphics::text::prewarm_font_system();
+
     let helper = Context::default();
 
     let mut settings = helper.window_settings();
