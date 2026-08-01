@@ -168,12 +168,7 @@ impl<'a, Message: Clone + 'static> Widget<Message, crate::Theme, crate::Renderer
 {
     fn diff(&mut self, tree: &mut tree::Tree) {
         if let Some(center) = &mut self.center {
-            tree.diff_children(&mut [
-                &mut self.start,
-                &mut self.end,
-                &mut self.controls,
-                center,
-            ]);
+            tree.diff_children(&mut [&mut self.start, &mut self.end, &mut self.controls, center]);
         } else {
             tree.diff_children(&mut [&mut self.start, &mut self.end, &mut self.controls]);
         }

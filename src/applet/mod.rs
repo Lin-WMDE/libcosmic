@@ -94,7 +94,10 @@ impl PanelType {
     /// `Panel3` and says nothing about appearance. The name remains the fallback, for a
     /// panel old enough not to export a look.
     fn from_env() -> Self {
-        match std::env::var("WMDE_PANEL_LOOK").unwrap_or_default().as_str() {
+        match std::env::var("WMDE_PANEL_LOOK")
+            .unwrap_or_default()
+            .as_str()
+        {
             "Bar" => Self::Panel,
             "Island" => Self::Dock,
             _ => Self::from(std::env::var("WMDE_PANEL_NAME").unwrap_or_default()),
