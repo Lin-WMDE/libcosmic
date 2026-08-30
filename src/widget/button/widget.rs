@@ -806,6 +806,7 @@ pub fn update<'a, Message: Clone>(
 
                 if cursor.is_over(bounds) {
                     state.is_pressed = true;
+                    shell.request_redraw();
 
                     if let Some(on_press_down) = on_press_down {
                         let msg = (on_press_down)(layout.virtual_offset(), layout.bounds());
@@ -837,7 +838,10 @@ pub fn update<'a, Message: Clone>(
                 }
             } else if on_press_down.is_some() {
                 let state = state();
-                state.is_pressed = false;
+                if state.is_pressed {
+                    state.is_pressed = false;
+                    shell.request_redraw();
+                }
             }
         }
         #[cfg(feature = "a11y")]
@@ -868,8 +872,21 @@ pub fn update<'a, Message: Clone>(
                 }
             }
         }
+        Event::Mouse(mouse::Event::CursorMoved { .. })
+        | Event::Touch(touch::Event::FingerMoved { .. }) => {
+            let state = state();
+            let is_hovered = cursor.is_over(layout.bounds());
+            if state.is_hovered != is_hovered {
+                state.is_hovered = is_hovered;
+                shell.request_redraw();
+            }
+        }
         Event::Touch(touch::Event::FingerLost { .. }) | Event::Mouse(mouse::Event::CursorLeft) => {
             let state = state();
+
+            if state.is_hovered || state.is_pressed {
+                shell.request_redraw();
+            }
             state.is_hovered = false;
             state.is_pressed = false;
         }

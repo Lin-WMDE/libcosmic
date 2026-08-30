@@ -237,7 +237,7 @@ pub(super) struct MenuSlice {
 #[derive(Debug, Clone)]
 /// Menu bounds in overlay space
 pub struct MenuBounds {
-    child_positions: Vec<f32>,
+    pub(crate) child_positions: Vec<f32>,
     child_sizes: Vec<Size>,
     children_bounds: Rectangle,
     pub parent_bounds: Rectangle,
@@ -634,6 +634,10 @@ impl<'b, Message: Clone + 'static> Menu<'b, Message> {
                     shell,
                 );
 
+                if view_cursor.is_over(viewport) {
+                    shell.request_redraw();
+                }
+
                 if self.is_overlay && view_cursor.is_over(viewport) {
                     shell.capture_event();
                 }
@@ -703,7 +707,7 @@ impl<'b, Message: Clone + 'static> Menu<'b, Message> {
             }
 
             _ => {}
-        };
+        }
         None
     }
 
@@ -811,11 +815,11 @@ impl<'b, Message: Clone + 'static> Menu<'b, Message> {
                                 let rad_0 = theme.cosmic().radius_0();
                                 if start_index != end_index {
                                     if 0 == i {
-                                        rad[0] = rad_0[0];
-                                        rad[1] = rad_0[1];
+                                        rad[2] = rad_0[0];
+                                        rad[3] = rad_0[1];
                                     } else if i == end_index - start_index {
-                                        rad[2] = rad_0[2];
-                                        rad[3] = rad_0[3];
+                                        rad[0] = rad_0[2];
+                                        rad[1] = rad_0[3];
                                     } else {
                                         rad = rad_0;
                                     }
@@ -1502,7 +1506,9 @@ where
         // cursor is outside
         {
 
-            last_menu_state.index = None;
+            if last_menu_state.index.take().is_some() {
+                shell.request_redraw();
+            }
             shell.capture_event();
             return new_menu_root;
         }
@@ -1560,6 +1566,10 @@ where
         let item = &active_menu[new_index];
         // set new index
         let old_index = last_menu_state.index.replace(new_index);
+
+        if old_index != Some(new_index) {
+            shell.request_redraw();
+        }
 
         // get new active item
         // * add new menu if the new item is a menu
@@ -1693,6 +1703,7 @@ fn process_scroll_events<Message>(
             }
         }
         shell.capture_event();
+        shell.request_redraw();
     });
 }
 
