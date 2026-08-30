@@ -1868,6 +1868,7 @@ where
                 ..
             }) = event
             {
+                shell.request_redraw();
                 state.focused_visible = true;
                 return if *modifiers == keyboard::Modifiers::SHIFT {
                     self.focus_previous(state, shell);

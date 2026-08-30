@@ -567,6 +567,7 @@ pub fn update<
                 state: &mut State,
                 on_selected: Arc<dyn Fn(usize) -> Message + Send + Sync + 'static>| {
         state.is_open.store(true, Ordering::Relaxed);
+        shell.request_redraw();
         let mut hovered_guard = state.hovered_option.lock().unwrap();
         *hovered_guard = selected;
         let id = window::Id::unique();
@@ -661,6 +662,7 @@ pub fn update<
         state.close_operation = false;
         state.is_open.store(false, Ordering::SeqCst);
         if is_open {
+            shell.request_redraw();
             #[cfg(wayland_platform)]
             if let Some(ref on_close) = on_surface_action {
                 shell.publish(on_close(surface::action::destroy_popup(state.popup_id)));
@@ -684,6 +686,7 @@ pub fn update<
                 // Event wasn't processed by overlay, so cursor was clicked either outside it's
                 // bounds or on the drop-down, either way we close the overlay.
                 state.is_open.store(false, Ordering::Relaxed);
+                shell.request_redraw();
                 #[cfg(wayland_platform)]
                 if let Some(on_close) = on_surface_action {
                     shell.publish(on_close(surface::action::destroy_popup(state.popup_id)));
