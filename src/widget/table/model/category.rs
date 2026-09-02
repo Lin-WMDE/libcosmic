@@ -9,6 +9,14 @@ pub trait ItemCategory:
 {
     /// Function that gets the width of the data
     fn width(&self) -> iced::Length;
+
+    /// Which edge of the column the heading and the cells line up against.
+    ///
+    /// A number read against its neighbours has to line up on the right; a name reads on the
+    /// left. Defaults to the left so that an existing table keeps the layout it had.
+    fn align(&self) -> iced::alignment::Horizontal {
+        iced::alignment::Horizontal::Left
+    }
 }
 
 pub trait ItemInterface<Category: ItemCategory> {

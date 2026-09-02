@@ -5,7 +5,7 @@ use crate::widget::table::model::selection::Selectable;
 use crate::widget::table::model::{Entity, Model};
 use crate::widget::{self, container, divider, menu};
 use crate::{Apply, Element, theme};
-use iced::{Alignment, Border, Length, Padding};
+use iced::{Alignment, Length, Padding};
 
 // THIS IS A PLACEHOLDER UNTIL A MORE SOPHISTICATED WIDGET CAN BE DEVELOPED
 
@@ -110,6 +110,7 @@ where
                             .right(val.item_padding.right),
                     )
                     .width(category.width())
+                    .align_x(category.align())
                     .apply(widget::mouse_area)
                     .apply(|mouse_area| {
                         if let Some(ref on_category_select) = val.on_category_mb_left {
@@ -123,6 +124,10 @@ where
             })
             .apply(widget::row::with_children)
             .apply(Element::from);
+        // Square in the WMDE theme, where radius_xl is zero; a theme that rounds its list
+        // rows rounds these too. Read once per view rather than per row.
+        let row_radii = theme::active().cosmic().corner_radii.radius_xl;
+
         // Build the items
         let items_full = if val.model.items.is_empty() {
             vec![
@@ -158,48 +163,24 @@ where
                                     .align_y(Alignment::Center)
                                     .apply(container)
                                     .width(category.width())
+                                    .align_x(category.align())
                                     .align_y(Alignment::Center)
                                     .apply(Element::from)
                             })
                             .apply(widget::row::with_children)
-                            .apply(container)
+                            // A row is a list row, so it is a `ListItem` button and not a
+                            // painted container: that is what carries the pointer highlight,
+                            // the pressed fill and the square corners the rest of the stack's
+                            // lists use. Left click rides on the button; the other buttons
+                            // stay on the mouse area around it, which has no styling of its
+                            // own.
+                            .apply(widget::button::custom)
                             .padding(val.item_padding)
-                            .class(theme::Container::custom(move |theme| {
-                                widget::container::Style {
-                                    icon_color: if selected {
-                                        Some(theme.cosmic().on_accent_color().into())
-                                    } else {
-                                        None
-                                    },
-                                    text_color: if selected {
-                                        Some(theme.cosmic().on_accent_color().into())
-                                    } else {
-                                        None
-                                    },
-                                    background: if selected {
-                                        Some(iced::Background::Color(
-                                            theme.cosmic().accent_color().into(),
-                                        ))
-                                    } else {
-                                        None
-                                    },
-                                    border: Border {
-                                        radius: theme.cosmic().radius_xs().into(),
-                                        ..Default::default()
-                                    },
-                                    shadow: Default::default(),
-                                    snap: true,
-                                }
-                            }))
+                            .width(Length::Fill)
+                            .on_press_maybe(val.on_item_mb_left.as_ref().map(|f| f(entity)))
+                            .selected(selected)
+                            .class(theme::Button::ListItem(row_radii))
                             .apply(widget::mouse_area)
-                            // Left click
-                            .apply(|mouse_area| {
-                                if let Some(ref on_item_mb) = val.on_item_mb_left {
-                                    mouse_area.on_press((on_item_mb)(entity))
-                                } else {
-                                    mouse_area
-                                }
-                            })
                             // Double click
                             .apply(|mouse_area| {
                                 if let Some(ref on_item_mb) = val.on_item_mb_double {

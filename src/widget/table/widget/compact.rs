@@ -5,7 +5,7 @@ use crate::widget::table::model::selection::Selectable;
 use crate::widget::table::model::{Entity, Model};
 use crate::widget::{self, container, menu};
 use crate::{Apply, Element, theme};
-use iced::{Alignment, Border, Padding};
+use iced::{Alignment, Padding};
 
 #[derive(Setters)]
 #[must_use]
@@ -54,6 +54,8 @@ where
 {
     fn from(val: CompactTableView<'a, SelectionMode, Item, Category, Message>) -> Self {
         let cosmic_theme::Spacing { space_xxxs, .. } = theme::spacing();
+        // Square in the WMDE theme, where radius_xl is zero.
+        let row_radii = theme::active().cosmic().corner_radii.radius_xl;
         val.model
             .iter()
             .map(|entity| {
@@ -100,45 +102,16 @@ where
                                             .wrap()
                                     }),
                             )
-                            .apply(container)
+                            // Same as the wide table: a list row is a `ListItem` button, so
+                            // that it carries the pointer highlight and the pressed fill the
+                            // rest of the stack's lists have.
+                            .apply(widget::button::custom)
                             .padding(val.item_padding)
                             .width(iced::Length::Fill)
-                            .class(theme::Container::custom(move |theme| {
-                                widget::container::Style {
-                                    icon_color: if selected {
-                                        Some(theme.cosmic().on_accent_color().into())
-                                    } else {
-                                        None
-                                    },
-                                    text_color: if selected {
-                                        Some(theme.cosmic().on_accent_color().into())
-                                    } else {
-                                        None
-                                    },
-                                    background: if selected {
-                                        Some(iced::Background::Color(
-                                            theme.cosmic().accent_color().into(),
-                                        ))
-                                    } else {
-                                        None
-                                    },
-                                    border: Border {
-                                        radius: theme.cosmic().radius_xs().into(),
-                                        ..Default::default()
-                                    },
-                                    shadow: Default::default(),
-                                    snap: true,
-                                }
-                            }))
+                            .on_press_maybe(val.on_item_mb_left.as_ref().map(|f| f(entity)))
+                            .selected(selected)
+                            .class(theme::Button::ListItem(row_radii))
                             .apply(widget::mouse_area)
-                            // Left click
-                            .apply(|mouse_area| {
-                                if let Some(ref on_item_mb) = val.on_item_mb_left {
-                                    mouse_area.on_press((on_item_mb)(entity))
-                                } else {
-                                    mouse_area
-                                }
-                            })
                             // Double click
                             .apply(|mouse_area| {
                                 if let Some(ref on_item_mb) = val.on_item_mb_double {

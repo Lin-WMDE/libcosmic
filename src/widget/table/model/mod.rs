@@ -342,6 +342,15 @@ where
     }
 
     /// Sorts items in the model, this should be called before it is drawn after all items have been added for the view
+    /// Record which column the arrow in the heading points at, without touching the order.
+    ///
+    /// For a model whose order is built outside: a tree of groups and their processes cannot
+    /// survive [`Self::sort`], because that sorts one flat sequence and reverses it whole,
+    /// which would lift the children above their group.
+    pub fn set_sort(&mut self, sort: Option<(Category, bool)>) {
+        self.sort = sort;
+    }
+
     pub fn sort(&mut self, category: Category, ascending: bool) {
         match self.sort {
             Some((cat, asc)) if cat == category && asc == ascending => return,
