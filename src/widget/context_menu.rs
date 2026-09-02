@@ -268,9 +268,15 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
 
     fn diff(&mut self, tree: &mut Tree) {
         tree.diff_children(std::slice::from_mut(&mut self.content));
+        // A row with no menu of its own is what `None` is for, and it is the one state this
+        // method used to unwrap through: `children`, `on_event` and `overlay` all handle it.
+        // A table whose builder returns `None` for a heading row reached here and panicked.
+        let Some(context_menu) = self.context_menu.as_mut() else {
+            return;
+        };
         let state = tree.state.downcast_mut::<LocalState>();
         state.menu_bar_state.inner.with_data_mut(|inner| {
-            menu_roots_diff(self.context_menu.as_mut().unwrap(), &mut inner.tree);
+            menu_roots_diff(context_menu, &mut inner.tree);
         });
 
         // if let Some(ref mut context_menus) = self.context_menu {

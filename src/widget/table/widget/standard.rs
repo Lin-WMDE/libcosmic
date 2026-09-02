@@ -177,10 +177,22 @@ where
                             .apply(widget::button::custom)
                             .padding(val.item_padding)
                             .width(Length::Fill)
-                            .on_press_maybe(val.on_item_mb_left.as_ref().map(|f| f(entity)))
+                            // No on_press: a button that takes the press consumes it, and the
+                            // mouse area around it would never see the second click of a
+                            // double click. force_enabled keeps the hover and selected
+                            // styling that an on_press-less button would otherwise lose.
+                            .force_enabled(true)
                             .selected(selected)
                             .class(theme::Button::ListItem(row_radii))
                             .apply(widget::mouse_area)
+                            // Left click
+                            .apply(|mouse_area| {
+                                if let Some(ref on_item_mb) = val.on_item_mb_left {
+                                    mouse_area.on_press((on_item_mb)(entity))
+                                } else {
+                                    mouse_area
+                                }
+                            })
                             // Double click
                             .apply(|mouse_area| {
                                 if let Some(ref on_item_mb) = val.on_item_mb_double {
