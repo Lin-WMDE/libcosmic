@@ -398,6 +398,8 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
                     state.view_cursor = cursor;
                 }
             });
+            // Closing needs a frame for the same reason opening does.
+            shell.request_redraw();
         }
 
         if !was_open && cursor.is_over(bounds) {
@@ -431,6 +433,11 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
                     self.create_popup(layout, cursor, renderer, shell, viewport, state);
                 }
 
+                // The menu is drawn by `overlay`, which runs on the next frame - and without
+                // this there is no next frame until the application draws one for a reason
+                // of its own. An application that redraws once a second opens its context
+                // menu up to a second after the click.
+                shell.request_redraw();
                 shell.capture_event();
                 return;
             } else if !was_open && right_button_released(event)
@@ -455,6 +462,7 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
                         state.view_cursor = cursor;
                     }
                 });
+                shell.request_redraw();
             }
         }
         self.content.as_widget_mut().update(
@@ -493,9 +501,16 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
             return None;
         }
 
+        // A context menu is anchored to the point that was clicked, so the anchor is that
+        // point and nothing else. Keeping the width and height of the content - a whole
+        // table row, a whole graph - made the menu open a widget's height above the cursor
+        // and a widget's width to the side of it, because `main_offset` below is that height
+        // and the placement runs from the far edge of this rectangle.
         let mut bounds = layout.bounds();
         bounds.x = state.context_cursor.x;
         bounds.y = state.context_cursor.y;
+        bounds.width = 0.0;
+        bounds.height = 0.0;
         Some(
             crate::widget::menu::Menu {
                 tree: state.menu_bar_state.clone(),
