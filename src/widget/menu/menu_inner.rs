@@ -1210,14 +1210,13 @@ pub(crate) fn init_root_menu<Message: Clone>(
             }
 
             if root_bounds.contains(overlay_cursor) {
-                let view_center = viewport_size.width * 0.5;
-                let rb_center = root_bounds.center_x();
-
-                state.horizontal_direction = if menu.is_overlay && rb_center > view_center {
-                    Direction::Negative
-                } else {
-                    Direction::Positive
-                };
+                // Open to the right, and let `Aod::adaptive` turn it around when the room to
+                // the right runs out - it already measures both sides and the width of the
+                // menu. Preferring the other side once the anchor passes the middle of the
+                // window turned menus around with hundreds of pixels still free beside them,
+                // which for a context menu meant it opened away from the pointer for no
+                // reason the person clicking could see.
+                state.horizontal_direction = Direction::Positive;
 
                 let aod = Aod {
                     horizontal: true,
