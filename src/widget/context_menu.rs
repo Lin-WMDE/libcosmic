@@ -501,16 +501,28 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
             return None;
         }
 
-        // A context menu is anchored to the point that was clicked, so the anchor is that
-        // point and nothing else. Keeping the width and height of the content - a whole
-        // table row, a whole graph - made the menu open a widget's height above the cursor
-        // and a widget's width to the side of it, because `main_offset` below is that height
-        // and the placement runs from the far edge of this rectangle.
+        // A small box around the click, not the bounds of the content.
+        //
+        // This rectangle does two jobs. It anchors the menu - the placement puts the menu's
+        // top-left at `x` and at `y + height + main_offset` - and it is the hit test that
+        // decides the menu opens at all: `init_root_menu` skips the menu unless this
+        // contains the cursor. So it can be neither the content's bounds nor a point.
+        //
+        // With the content's bounds the menu landed far from the pointer: the direction to
+        // open in is chosen by comparing the middle of this rectangle against the middle of
+        // the window, and a rectangle as wide as a table row is middled a long way right of
+        // the click, so the menu flipped and pinned itself to the far edge. With a point the
+        // hit test can never pass, because the pointer drifts a pixel between the release
+        // and the frame that draws the menu.
+        //
+        // A box of this size is middled next to the pointer, so the direction is honest, and
+        // it takes the drift.
+        const ANCHOR: f32 = 24.0;
         let mut bounds = layout.bounds();
         bounds.x = state.context_cursor.x;
-        bounds.y = state.context_cursor.y;
-        bounds.width = 0.0;
-        bounds.height = 0.0;
+        bounds.y = state.context_cursor.y - ANCHOR / 2.0;
+        bounds.width = ANCHOR;
+        bounds.height = ANCHOR;
         Some(
             crate::widget::menu::Menu {
                 tree: state.menu_bar_state.clone(),
@@ -525,7 +537,9 @@ impl<Message: 'static + Clone> Widget<Message, crate::Theme, crate::Renderer>
                 item_width: ItemWidth::Uniform(240),
                 item_height: ItemHeight::Dynamic(40),
                 bar_bounds: bounds,
-                main_offset: -(bounds.height as i32),
+                // Half the anchor, so the menu's top lands on the click: the placement adds
+                // the anchor's height to its top, and its top is half a box above the click.
+                main_offset: -(ANCHOR / 2.0) as i32,
                 cross_offset: 0,
                 root_bounds_list: vec![bounds],
                 path_highlight: Some(PathHighlight::MenuActive),
