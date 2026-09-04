@@ -186,10 +186,14 @@ impl<Message> iced_core::Overlay<Message, crate::Theme, crate::Renderer> for Ove
         let space_below = bounds.height - (position.y + self.target_height);
         let space_above = position.y;
 
+        // The list is as wide as its own contents, and the room to the right of the field is
+        // not what decides that: it is laid out against the whole window and slides left when
+        // it would otherwise run off the edge. Clipping it to what is left to the right made a
+        // field the width of its own label wrap every entry longer than that label.
         let limits = layout::Limits::new(
             Size::ZERO,
             Size::new(
-                bounds.width - position.x,
+                bounds.width,
                 if space_below > space_above {
                     space_below
                 } else {
@@ -202,11 +206,14 @@ impl<Message> iced_core::Overlay<Message, crate::Theme, crate::Renderer> for Ove
         let node = self.container.layout(self.state, renderer, &limits);
 
         let node_size = node.size();
-        node.move_to(if space_below > space_above {
+        let mut origin = if space_below > space_above {
             position + Vector::new(0.0, self.target_height)
         } else {
             position - Vector::new(0.0, node_size.height)
-        })
+        };
+        // What does not fit to the right is taken from the left, and never past the edge.
+        origin.x = origin.x.min(bounds.width - node_size.width).max(0.0);
+        node.move_to(origin)
     }
 
     fn update(
