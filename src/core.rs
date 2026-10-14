@@ -137,6 +137,9 @@ pub struct Core {
 
     pub(crate) auto_blur: BitFlags<Auto>,
 
+    /// WMDE: the compositor draws Mica under the main window; see [`Core::mica`].
+    pub(crate) mica: bool,
+
     pub(crate) auto_corner_radius: BitFlags<Auto>,
 
     pub(crate) app_type: AppType,
@@ -213,6 +216,7 @@ impl Default for Core {
             exit_on_main_window_closed: true,
             menu_bars: HashMap::new(),
             auto_blur: Auto::System | Auto::Popup | Auto::Window,
+            mica: false,
             auto_corner_radius: Auto::System | Auto::Popup | Auto::Window,
             app_type: AppType::Window,
         }
@@ -571,6 +575,14 @@ impl Core {
 
     pub fn auto_blur(&self) -> BitFlags<Auto> {
         self.auto_blur
+    }
+
+    /// WMDE: whether the compositor draws Mica under the main window, so its title bar is left
+    /// without a fill of its own. Set from the compositor's `mica_titlebars` switch, and only
+    /// for an application window on a compositor that offers a background effect - anywhere
+    /// else a transparent title bar would be a hole in the window.
+    pub fn mica(&self) -> bool {
+        self.mica
     }
 
     /// Whether the active theme's frosted (blur) styling should apply to this

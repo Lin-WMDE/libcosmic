@@ -106,6 +106,9 @@ pub struct Cosmic<App: Application> {
     >,
     pub opened_surfaces: HashMap<window::Id, u32>,
     blur_enabled: bool,
+    /// WMDE: the compositor's `mica_titlebars` switch as read; [`Core::mica`] is what is in
+    /// effect.
+    mica_titlebars: bool,
 }
 
 impl<T: Application> Cosmic<T>
@@ -704,6 +707,33 @@ where
         #[cfg(feature = "single-instance")]
         if self.app.core().single_instance {
             subscriptions.push(crate::dbus_activation::subscription::<T>());
+        }
+
+        // WMDE: the compositor's Mica switch, which only an application window follows.
+        #[cfg(wayland_platform)]
+        if self.app.core().app_type() == crate::core::AppType::Window {
+            subscriptions.push(
+                self.app
+                    .core()
+                    .watch_config::<crate::config::CompMica>(crate::config::COMP_ID)
+                    .map(|update| {
+                        for why in update
+                            .errors
+                            .into_iter()
+                            .filter(cosmic_config::Error::is_err)
+                        {
+                            if let cosmic_config::Error::GetKey(_, err) = &why
+                                && err.kind() == std::io::ErrorKind::NotFound
+                            {
+                                // The switch was never set: Mica is off.
+                                continue;
+                            }
+                            tracing::error!(?why, "compositor config update error");
+                        }
+                        Action::CompMica(update.config.mica_titlebars)
+                    })
+                    .map(crate::Action::Cosmic),
+            );
         }
 
         // Drives the text context-menu popup queues: a right-click queues a
@@ -1393,13 +1423,28 @@ impl<T: Application> Cosmic<T> {
                         Task::none()
                     };
 
+                    // WMDE: a main window opened while Mica is on asks for its backdrop too.
+                    let mica_cmd =
+                        if self.app.core().mica() && self.app.core().main_window_id() == Some(id) {
+                            iced::window::enable_blur(id)
+                        } else {
+                            Task::none()
+                        };
+
                     return Task::batch([
                         blur_cmd,
+                        mica_cmd,
                         corner_task,
                         iced_runtime::window::run_with_handle(id, init_windowing_system),
                     ]);
                 }
                 return iced_runtime::window::run_with_handle(id, init_windowing_system);
+            }
+            #[cfg(wayland_platform)]
+            Action::CompMica(on) => {
+                self.mica_titlebars = on;
+                let frosted = self.app.core().blur(&THEME.lock().unwrap(), None);
+                return self.sync_mica(frosted);
             }
             #[cfg(wayland_platform)]
             Action::BlurEnabled => {
@@ -1437,6 +1482,8 @@ impl<T: Application> Cosmic<T> {
                             cmds.push(iced::window::disable_blur(*id));
                         }
                     }
+                    let frosted = self.app.core().blur(&t, None);
+                    cmds.push(self.sync_mica(frosted));
                     return Task::batch(cmds);
                 }
             }
@@ -1454,6 +1501,28 @@ impl<App: Application> Cosmic<App> {
             surface_views: HashMap::new(),
             opened_surfaces: HashMap::new(),
             blur_enabled: false,
+            mica_titlebars: false,
+        }
+    }
+
+    /// WMDE: bring [`Core::mica`] in line with the switch and the compositor's support, and
+    /// ask for the background effect on the main window to match - the compositor draws Mica
+    /// under a window that has one. `frosted` says the window keeps its effect for the blur
+    /// anyway. Does not lock `THEME`: callers may hold it.
+    #[cfg(wayland_platform)]
+    fn sync_mica(&mut self, frosted: bool) -> Task<crate::Action<App::Message>> {
+        let core = self.app.core();
+        let mica = self.mica_titlebars
+            && self.blur_enabled
+            && core.app_type() == crate::core::AppType::Window;
+        if core.mica == mica {
+            return Task::none();
+        }
+        self.app.core_mut().mica = mica;
+        match self.app.core().main_window_id() {
+            Some(id) if mica => iced::window::enable_blur(id),
+            Some(id) if !frosted => iced::window::disable_blur(id),
+            _ => Task::none(),
         }
     }
 

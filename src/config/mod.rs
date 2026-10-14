@@ -13,6 +13,18 @@ use std::sync::{LazyLock, RwLock};
 /// ID for the `CosmicTk` config.
 pub const ID: &str = "fun.wmde.Tk";
 
+/// WMDE: ID of the compositor's config, read for its Mica switch only.
+pub const COMP_ID: &str = "fun.wmde.Comp";
+
+/// WMDE: the compositor's Mica switch. One key of the compositor's config, so an application
+/// follows the same switch the compositor does instead of a second one of its own.
+#[derive(Clone, CosmicConfigEntry, Debug, Default, Eq, PartialEq)]
+#[version = 1]
+pub struct CompMica {
+    /// Mica under the title bars.
+    pub mica_titlebars: bool,
+}
+
 const MONO_FAMILY_DEFAULT: &str = "Noto Sans Mono";
 const SANS_FAMILY_DEFAULT: &str = "Open Sans";
 

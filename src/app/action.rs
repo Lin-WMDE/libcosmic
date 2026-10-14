@@ -73,6 +73,8 @@ pub enum Action {
     WindowingSystemInitialized,
     /// Blur support enabled
     BlurEnabled,
+    /// WMDE: the compositor's Mica switch changed.
+    CompMica(bool),
     /// Updates the window maximized state
     WindowMaximized(iced::window::Id, bool),
     /// Updates the tracked window geometry.

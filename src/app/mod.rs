@@ -693,6 +693,9 @@ impl<App: Application> ApplicationExt for App {
         let sharp_corners = core.window.sharp_corners;
         let maximized = core.window.is_maximized;
         let content_container = core.window.content_container;
+        // WMDE: the compositor draws Mica under the whole window, so the title bar is left
+        // without a fill of its own and everything under it gets the window background.
+        let mica = core.mica();
         let show_context = core.window.show_context;
         let nav_bar_active = core.nav_bar_active();
         let focused = core
@@ -885,8 +888,8 @@ impl<App: Application> ApplicationExt for App {
                     .class(crate::widget::header_strip_class())
             });
 
-        let view_column = crate::widget::column::with_capacity(2)
-            .push_maybe(if core.window.show_headerbar {
+        let view_column =
+            crate::widget::column::with_capacity(2).push_maybe(if core.window.show_headerbar {
                 Some({
                     let title_bar = core.window.title_bar;
                     let mut header = crate::widget::header_bar()
@@ -933,9 +936,11 @@ impl<App: Application> ApplicationExt for App {
                             .class(crate::theme::Container::custom(move |theme| {
                                 let cosmic = theme.cosmic();
                                 container::Style {
-                                    background: Some(iced::Background::Color(
-                                        cosmic.background(theme.transparent).base.into(),
-                                    )),
+                                    background: (!mica).then(|| {
+                                        iced::Background::Color(
+                                            cosmic.background(theme.transparent).base.into(),
+                                        )
+                                    }),
                                     border: iced::Border {
                                         radius: [
                                             (window_corner_radius[0] - 1.0).max(0.0),
@@ -954,15 +959,50 @@ impl<App: Application> ApplicationExt for App {
                 })
             } else {
                 None
-            })
-            .push_maybe(strip)
-            // The content element contains every element beneath the header.
-            .push(content)
+            });
+        let view_column = if mica && content_container {
+            // WMDE: under Mica the window background starts below the title bar, with the
+            // window's bottom corners.
+            view_column.push(
+                crate::widget::column::with_capacity(2)
+                    .push_maybe(strip)
+                    .push(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .apply(container)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .class(crate::theme::Container::custom(move |theme| {
+                        container::Style {
+                            background: Some(iced::Background::Color(
+                                theme.cosmic().background(theme.transparent).base.into(),
+                            )),
+                            border: iced::Border {
+                                radius: [
+                                    0.0,
+                                    0.0,
+                                    (window_corner_radius[2] - 1.0).max(0.0),
+                                    (window_corner_radius[3] - 1.0).max(0.0),
+                                ]
+                                .into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })),
+            )
+        } else {
+            view_column
+                .push_maybe(strip)
+                // The content element contains every element beneath the header.
+                .push(content)
+        };
+        let view_column = view_column
             .apply(container)
             .padding(if maximized { 0 } else { 1 })
             .class(crate::theme::Container::custom(move |theme| {
                 container::Style {
-                    background: if content_container {
+                    background: if content_container && !mica {
                         Some(iced::Background::Color(
                             theme.cosmic().background(theme.transparent).base.into(),
                         ))
